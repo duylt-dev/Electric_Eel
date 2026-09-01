@@ -13,6 +13,7 @@
  *   node tools/validate-config.cjs --strict            # coi cảnh báo là lỗi
  *   node tools/validate-config.cjs --quiet             # chỉ in phần LỖI
  *   node tools/validate-config.cjs --include-disabled  # xét cả vị trí đang tắt
+ *   node tools/validate-config.cjs --sdk=<ConfigAds.kt>  # lấy danh sách template thẳng từ SDK
  *
  * Mã thoát: 0 = không có lỗi, 1 = có lỗi, 2 = không đọc được file.
  *
@@ -37,6 +38,20 @@
  *   2. Config `interstitial` mang field native là HỢP LỆ khi isShowNativeAfterInter
  *      bật — đó là cấu hình cho native hiện sau khi đóng interstitial.
  *   3. `id: "test"` là quy ước đánh dấu slot demo, không phải ID sai định dạng.
+ *
+ * SCHEMA LẤY TỪ ĐÂU
+ *
+ * Mọi hằng số trong file này đối chiếu với LibAds của app Love-Test (`co.lovetest`):
+ *
+ *   ConfigResult.kt   field cấp gốc của config_show_ads
+ *   ConfigAds.kt      field mỗi phần tử listConfig, và danh sách layout template
+ *   AdsChild.kt       field mỗi phần tử listAds
+ *   Ads.kt            field cấp gốc của admob_id
+ *   AdDef.kt          giá trị hợp lệ của type và network
+ *
+ * Gson bỏ qua field không khớp tên trong model mà không báo gì, nên một tên viết sai không
+ * có triệu chứng nào ngoài việc cấu hình vừa chỉnh không có tác dụng. Đó là lý do file này
+ * đối chiếu tên field chứ không chỉ kiểu dữ liệu.
  */
 
 const fs = require('fs');
@@ -63,6 +78,7 @@ const quiet = flag('quiet');
 const includeDisabled = flag('include-disabled');
 const dir = argv.find((a) => !a.startsWith('-')) || './docs';
 
+const sdkModelPath = value('sdk');
 const adsPath = value('ads') || path.join(dir, 'admob_id-template.json');
 const cfgPath = value('config') || path.join(dir, 'config_show_ads-template.json');
 
@@ -95,36 +111,103 @@ const isDemoSlot = (name) => /^demo(_|$)/i.test(String(name || ''));
 const DIRECT_CALL_SLOTS = [/^preload_/i, /^splash_openad/i];
 const isDirectCallSlot = (name) => DIRECT_CALL_SLOTS.some((re) => re.test(String(name || '')));
 
+/**
+ * Nguồn: LibAds `utils/AdDef.kt`, lớp `ADS_TYPE_ADMOB`. Đúng 11 loại, và `native_interstitial`
+ * KHÔNG nằm trong đó — template của project cũ (rbxclothesmaker) có dùng, nên project ấy chạy
+ * SDK khác. Với LibAds, một type ngoài danh sách này là type SDK không nhận ra.
+ */
 const AD_TYPES = new Set([
-  'native', 'native_full_screen', 'native_interstitial', 'interstitial',
+  'open_app', 'interstitial', 'native', 'native_full_screen',
   'banner', 'banner_adaptive', 'banner_large', 'banner_inline',
-  'banner_collapsible', 'reward_video', 'reward_interstitial', 'open_app',
+  'banner_collapsible', 'reward_video', 'reward_interstitial',
 ]);
 
-const NATIVE_TYPES = new Set(['native', 'native_full_screen', 'native_interstitial']);
+const NATIVE_TYPES = new Set(['native', 'native_full_screen']);
 
-/** Field chỉ có nghĩa với native — hoặc với interstitial bật native-after-inter. */
+/** Nguồn: `AdDef.NETWORK`. */
+const NETWORKS = new Set(['google', 'pangle', 'mintegral']);
+
+/** Nguồn: `ConfigAds.kt`. Chỉ có nghĩa với native, hoặc interstitial bật native-after-inter. */
 const NATIVE_FIELDS = [
   'ctaGradientListColor', 'textCTAColor', 'ctaRatio', 'ctaConnerRadius',
   'layoutTemplate', 'backGroundColor', 'textContentColor', 'isPreloadAfterShow',
   'isCloseWhenClick', 'isCloseWhenClickNativeCollapsible', 'ctaAnimationSpeed',
   'nativeStrokeWidth', 'nativeStrokeColor',
 ];
-const INTER_FIELDS = [
-  'timeDelayShowInter', 'isShowNativeAfterInter', 'timeOutInter',
+const INTER_FIELDS = ['timeDelayShowInter', 'isShowNativeAfterInter'];
+
+/**
+ * Field xuất hiện trong template nhưng KHÔNG có trong `ConfigAds.kt` — đã grep toàn repo
+ * Love-Test, mỗi tên 0 lần. Gson bỏ qua chúng, nên ai chỉnh cũng không có tác dụng nào.
+ * Nguy hiểm hơn lỗi thường: không có triệu chứng, và người chỉnh tin là mình vừa đổi được gì đó.
+ */
+const DEAD_CONFIG_FIELDS = new Set([
+  'timeOutInter', 'timeOutRewardDialog',
   'timeOutInterSplashAllTime', 'timeOutInterSplashLoadInterOnlyTime',
-];
-const REWARD_FIELDS = ['timeOutRewardDialog'];
+]);
+const DEAD_ROOT_FIELDS = new Set(['enableReuseReadyNativeAd']);
+
+/**
+ * Tên bị viết sai so với model. Giá trị đặt trong template rơi vào hư không và SDK dùng
+ * mặc định. `isRewardInter` sai ngay trong cả file raw mặc định của LibAds, nên mọi project
+ * sinh ra từ đó đều mang lỗi này.
+ */
+const RENAMED_ROOT_FIELDS = { isRewardInter: 'isRewardInterOn' };
 
 /** Chú thích người viết tự thêm vào JSON. Không phải cấu hình, đừng đụng tới. */
 const META_FIELDS = new Set(['_comment', '_note', '_todo']);
 
-/** Mọi field đã biết — dùng để phát hiện tên viết sai. */
+/** Mọi field `ConfigAds.kt` thật sự khai — dùng để phát hiện tên viết sai. */
 const KNOWN_CONFIG_FIELDS = new Set([
-  'configName', 'isOn', 'type',
-  ...NATIVE_FIELDS, ...INTER_FIELDS, ...REWARD_FIELDS, ...META_FIELDS,
+  'configName', 'isOn', 'type', 'network', 'timeShowNativeCollapsibleAfterClose',
+  ...NATIVE_FIELDS, ...INTER_FIELDS, ...META_FIELDS,
 ]);
 
+/** Field `AdsChild.kt` khai. */
+const KNOWN_AD_FIELDS = new Set([
+  'network', 'spaceName', 'adsType', 'id', 'placementId', 'priority', 'buffer',
+]);
+
+/**
+ * Danh sách layout template SDK thật sự nhận, trích từ companion object của
+ * `LibAds/model/ConfigAds.kt`. Đây mới là nguồn đúng — năm mảng `listTemplate*` trong chính
+ * file config KHÔNG được SDK đọc (grep toàn repo Love-Test: 0 lần), chúng chỉ là tài liệu
+ * cho người. Một `layoutTemplate` ngoài danh sách này rơi vào nhánh `else` và im lặng dùng
+ * layout mặc định, nên không có triệu chứng nào ngoài việc quảng cáo trông khác ý.
+ *
+ * Truyền --sdk=<đường dẫn ConfigAds.kt> để đọc thẳng từ code thay vì dùng bản chép này.
+ */
+const SDK_TEMPLATES = new Set([
+  // small
+  "small_icon_ctaright", "small_ctaright",
+  // medium
+  "Medium1_icontop_ctabot", "medium3_icon_ctabot",
+  "medium3_ctabot", "Medium2_icon_ctatop",
+  "Medium2_icon_ctabot", "medium3_ctatop",
+  "medium_medialeft_iconright_ctabot", "medium_medialeft_noiconright_ctabot",
+  "medium_medialeft_iconright_ctatop", "medium_medialeft_noiconright_ctatop",
+  "medium_medialeft_iconright_ctaright", "medium_medialeft_noiconright_ctaright",
+  "medium_mediaright_iconleft_ctaleft", "medium_mediaright_noiconleft_ctaleft",
+  "medium_icontop_bodymidd_ctabot", "medium_icontop_ctamidd",
+  "medium_medialeft_icontop_ctaright", "medium_medialeft_noicontop_ctaright",
+  // large
+  "Larger_iconbot_cta_bot", "Larger_icontop_ctabot",
+  "Larger_iconframe_cta_bot", "lager_mediabot_iconleft_ctaright",
+  "lager_mediabot_noiconleft_ctaright", "larger_iconmidd_ctabot",
+  "larger_noiconmidd_ctabot",
+  // collapsible
+  "Medium1_icontop_ctabot_collapsible", "medium2_icon_ctabot_collapsible",
+  "medium2_ctabot_collapsible", "small_icon_ctaright_collapsible",
+  "medium_icontop_bodymidd_ctabot_collapsible", "medium_icontop_ctamidd_collapsible",
+  // native full
+  "nativefull_media_icon_cta", "nativefull_media_iconframe_cta",
+  "nativefull_iconframe_media_cta", "nativefull_media_iconmiddle_cta",
+  "nativefull_icon_media_cta", "nativefull_noicon_media_cta",
+  "nativefull_media916_cta_icon", "nativefull_media34_cta_icon",
+  "nativefull_media34_titleleft_ctaright", "nativefull_media34__ctaleft_titleright",
+]);
+
+/** Năm nhóm trong file config — dùng để nhóm template trên UI, không phải để kiểm tra. */
 const TEMPLATE_GROUPS = [
   'listTemplateSmall', 'listTemplateMedium', 'listTemplateLarge',
   'listTemplateCollapsible', 'listTemplateNativeFull',
@@ -168,6 +251,24 @@ const read = (p, label) => {
 
 const ads = read(adsPath, 'admob_id');
 const cfg = read(cfgPath, 'config_show_ads');
+
+/** Bản chép ở trên có thể lạc hậu so với SDK; --sdk đọc thẳng từ code cho chắc. */
+let sdkTemplates = SDK_TEMPLATES;
+if (sdkModelPath) {
+  let src;
+  try {
+    src = fs.readFileSync(sdkModelPath, 'utf8');
+  } catch (e) {
+    console.error(`Không đọc được ConfigAds.kt: ${sdkModelPath}\n  ${e.message}`);
+    process.exit(2);
+  }
+  const found = [...src.matchAll(/const val \w+ = "([^"]+)"/g)].map((m) => m[1]);
+  if (!found.length) {
+    console.error(`Không tìm thấy hằng template nào trong ${sdkModelPath}`);
+    process.exit(2);
+  }
+  sdkTemplates = new Set(found);
+}
 
 const listAds = Array.isArray(ads.listAds) ? ads.listAds : [];
 const listConfig = Array.isArray(cfg.listConfig) ? cfg.listConfig : [];
@@ -215,6 +316,13 @@ for (const unit of listAds) {
     }
   }
 
+  const strayAdFields = Object.keys(unit).filter((f) => !KNOWN_AD_FIELDS.has(f));
+  if (strayAdFields.length) {
+    CHECK('AD_FIELD_UNKNOWN', `"${name}" có field không nằm trong AdsChild.kt: ${strayAdFields.join(', ')}`, name);
+  }
+  if ('network' in unit && !NETWORKS.has(unit.network)) {
+    ERROR('AD_NETWORK', `"${name}" có network lạ: "${unit.network}" — AdDef chỉ nhận ${[...NETWORKS].join(', ')}`, name);
+  }
   if ('buffer' in unit && (!Number.isInteger(unit.buffer) || unit.buffer < 1)) {
     WARN('BUFFER_ODD', `"${name}" có buffer = ${unit.buffer} — nên là số nguyên >= 1`, name);
   }
@@ -238,6 +346,21 @@ for (const [id, owners] of idOwners) {
   CHECK('ID_REUSED', `Ad ID ${id} dùng chung ở ${owners.length} slot: ${owners.join(', ')}`, owners[0]);
 }
 
+/* ─────────────── field cấp gốc của config_show_ads ─────────────── */
+
+for (const [wrong, right] of Object.entries(RENAMED_ROOT_FIELDS)) {
+  if (!(wrong in cfg)) continue;
+  const same = right in cfg && JSON.stringify(cfg[wrong]) === JSON.stringify(cfg[right]);
+  ERROR('ROOT_FIELD_RENAMED',
+    `"${wrong}" không phải tên model đọc — phải là "${right}". Giá trị ${JSON.stringify(cfg[wrong])} đang bị bỏ qua${same ? '' : ', SDK dùng mặc định'}`,
+    'config_show_ads');
+}
+for (const field of DEAD_ROOT_FIELDS) {
+  if (field in cfg) {
+    WARN('ROOT_FIELD_DEAD', `"${field}" không có trong ConfigResult.kt — SDK không đọc, chỉnh không có tác dụng`, 'config_show_ads');
+  }
+}
+
 /* ────────────────────────── template ────────────────────────── */
 
 const templateGroupsOf = new Map();
@@ -256,7 +379,19 @@ for (const [tpl, groups] of templateGroupsOf) {
     WARN('TPL_DUP_GROUP', `Template "${tpl}" khai báo ở ${groups.length} nhóm: ${groups.join(' + ')}`, tpl);
   }
 }
-const knownTemplates = new Set(templateGroupsOf.keys());
+const declaredTemplates = new Set(templateGroupsOf.keys());
+
+// Năm mảng listTemplate* là danh mục cho người chọn, còn SDK chỉ nhận những tên nó tự khai.
+// Danh mục thừa một tên nghĩa là ai đó chọn phải sẽ thấy layout khác ý mà không hiểu vì sao;
+// danh mục thiếu một tên nghĩa là một layout SDK dựng được nhưng không ai biết để dùng.
+const phantomTemplates = [...declaredTemplates].filter((t) => !sdkTemplates.has(t));
+if (phantomTemplates.length) {
+  ERROR('TPL_NOT_IN_SDK', `${phantomTemplates.length} template có trong danh mục nhưng SDK không dựng được — ai chọn phải sẽ rơi về layout mặc định: ${phantomTemplates.join(', ')}`, 'config_show_ads');
+}
+const hiddenTemplates = [...sdkTemplates].filter((t) => !declaredTemplates.has(t));
+if (hiddenTemplates.length) {
+  CHECK('TPL_MISSING_FROM_LIST', `${hiddenTemplates.length} template SDK dựng được nhưng không có trong danh mục nên không ai chọn được: ${hiddenTemplates.join(', ')}`, 'config_show_ads');
+}
 
 /* ────────────────────────── config_show_ads ────────────────────────── */
 
@@ -308,30 +443,34 @@ for (const conf of listConfig) {
     const strays = INTER_FIELDS.filter((f) => f in conf);
     if (strays.length) WARN('CFG_INTER_FIELDS', `"${name}" (${conf.type}) mang field chỉ dành cho interstitial: ${strays.join(', ')}`, name);
   }
-  if (!String(conf.type).startsWith('reward')) {
-    const strays = REWARD_FIELDS.filter((f) => f in conf);
-    if (strays.length) WARN('CFG_REWARD_FIELDS', `"${name}" (${conf.type}) mang field chỉ dành cho reward: ${strays.join(', ')}`, name);
-  }
-
   // Field không nằm trong schema đã biết. Thường là tên viết sai — và một tên viết sai
   // thì SDK đọc ra undefined, im lặng dùng giá trị mặc định, nên không có triệu chứng nào
   // ngoài việc cấu hình bạn vừa chỉnh không có tác dụng.
-  const unknown = Object.keys(conf).filter((f) => !KNOWN_CONFIG_FIELDS.has(f));
+  const dead = Object.keys(conf).filter((f) => DEAD_CONFIG_FIELDS.has(f));
+  if (dead.length) {
+    WARN('CFG_FIELD_DEAD', `"${name}" mang ${dead.length} field không có trong ConfigAds.kt: ${dead.join(', ')} — SDK không đọc, chỉnh không có tác dụng`, name);
+  }
+  const unknown = Object.keys(conf).filter((f) => !KNOWN_CONFIG_FIELDS.has(f) && !DEAD_CONFIG_FIELDS.has(f));
   if (unknown.length) {
     CHECK('CFG_FIELD_UNKNOWN', `"${name}" có field chưa nằm trong schema đã biết: ${unknown.join(', ')} — kiểm tra xem có phải viết sai tên không`, name);
+  }
+  if ('network' in conf && !NETWORKS.has(conf.network)) {
+    ERROR('CFG_NETWORK', `"${name}" có network lạ: "${conf.network}" — AdDef chỉ nhận ${[...NETWORKS].join(', ')}`, name);
   }
 
   if (nativeFieldsAllowed) {
     if (!conf.layoutTemplate) {
+      // ConfigAds.layoutTemplate có sẵn mặc định "small_icon_ctaright", nên thiếu nó không
+      // làm hỏng gì — chỉ là quảng cáo hiện bằng layout nhỏ nhất thay vì layout đã chọn.
       if (isNative) {
-        ERROR('CFG_NO_TPL', `"${name}" (${conf.type}) thiếu layoutTemplate`, name);
+        WARN('CFG_NO_TPL', `"${name}" (${conf.type}) thiếu layoutTemplate — sẽ dùng mặc định small_icon_ctaright`, name);
       } else if (conf.isOn === true || includeDisabled) {
         // Chỉ đáng nói khi vị trí đang chạy; một vị trí đã tắt thì cấu hình thiếu
         // không ảnh hưởng ai, và báo hết sẽ chôn vùi những mục thật sự cần sửa.
         WARN('CFG_AFTERINTER_INCOMPLETE', `"${name}" bật isShowNativeAfterInter nhưng thiếu layoutTemplate — native sẽ hiện với giao diện mặc định`, name);
       }
-    } else if (!knownTemplates.has(conf.layoutTemplate)) {
-      ERROR('CFG_TPL_UNKNOWN', `"${name}" dùng layoutTemplate "${conf.layoutTemplate}" không có trong 5 nhóm khai báo`, name);
+    } else if (!sdkTemplates.has(conf.layoutTemplate)) {
+      ERROR('CFG_TPL_UNKNOWN', `"${name}" dùng layoutTemplate "${conf.layoutTemplate}" mà SDK không dựng được — sẽ im lặng rơi về layout mặc định`, name);
     }
 
     for (const field of ['textCTAColor', 'backGroundColor', 'textContentColor', 'nativeStrokeColor']) {
@@ -382,9 +521,9 @@ if (dashNames && underscoreNames) {
 }
 
 const usedTemplates = new Set(listConfig.map((c) => c.layoutTemplate).filter(Boolean));
-const unusedTemplates = [...knownTemplates].filter((t) => !usedTemplates.has(t));
+const unusedTemplates = [...sdkTemplates].filter((t) => !usedTemplates.has(t));
 if (unusedTemplates.length) {
-  CHECK('TPL_UNUSED', `${unusedTemplates.length}/${knownTemplates.size} template khai báo nhưng không config nào dùng`, 'config_show_ads');
+  CHECK('TPL_UNUSED', `${unusedTemplates.length}/${sdkTemplates.size} template SDK dựng được nhưng không config nào dùng`, 'config_show_ads');
 }
 
 /* ────────────────── nối hai file (longest-prefix match) ────────────────── */
@@ -507,7 +646,7 @@ if (asJson) {
     summary: {
       adUnits: listAds.length,
       configs: listConfig.length,
-      templates: knownTemplates.size,
+      templates: sdkTemplates.size,
       templatesUsed: usedTemplates.size,
       package: ads.package || null,
       publisher,
@@ -531,7 +670,7 @@ const LEVELS = {
 
 console.log('');
 console.log(`${bold('admob_id')}    ${listAds.length} ad unit   ${dim('·')}  app ${ads.package || '?'}  ${dim('·')}  publisher ${publisher || '?'}`);
-console.log(`${bold('config')}      ${listConfig.length} config    ${dim('·')}  ${knownTemplates.size} template, ${usedTemplates.size} đang dùng`);
+console.log(`${bold('config')}      ${listConfig.length} config    ${dim('·')}  ${sdkTemplates.size} template SDK dựng được, ${usedTemplates.size} đang dùng`);
 console.log('');
 
 for (const level of ['ERROR', 'WARN', 'CHECK']) {
