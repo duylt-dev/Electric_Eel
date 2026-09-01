@@ -360,7 +360,11 @@ for (const [name, n] of configCount) {
   if (n > 1) ERROR('CFG_DUP', `configName "${name}" xuất hiện ${n} lần`, name);
 }
 if (dashNames && underscoreNames) {
-  WARN('NAME_STYLE_MIXED', `Trộn hai kiểu đặt tên trong cùng một file: ${dashNames} tên dùng dấu "-", ${underscoreNames} tên dùng dấu "_"`, 'config_show_ads');
+  // Đã quyết giữ nguyên tên cũ: đổi tên config đòi sửa đồng thời cả hai file JSON lẫn code
+  // app gọi tên đó, và sai một chỗ là vị trí ấy tắt hẳn. Giữ ở mức CHECK để nhắc kiểu nào
+  // đang chiếm đa số khi ai đó thêm vị trí mới, chứ không phải để đòi sửa data đang chạy.
+  const dominant = underscoreNames >= dashNames ? '_' : '-';
+  CHECK('NAME_STYLE_MIXED', `Hai kiểu đặt tên cùng tồn tại: ${dashNames} tên dùng "-", ${underscoreNames} tên dùng "_". Vị trí thêm mới nên theo kiểu "${dominant}"`, 'config_show_ads');
 }
 
 const usedTemplates = new Set(listConfig.map((c) => c.layoutTemplate).filter(Boolean));
