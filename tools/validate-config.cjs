@@ -99,7 +99,20 @@ const NATIVE_FIELDS = [
   'isCloseWhenClick', 'isCloseWhenClickNativeCollapsible', 'ctaAnimationSpeed',
   'nativeStrokeWidth', 'nativeStrokeColor',
 ];
-const INTER_FIELDS = ['timeDelayShowInter', 'isShowNativeAfterInter'];
+const INTER_FIELDS = [
+  'timeDelayShowInter', 'isShowNativeAfterInter', 'timeOutInter',
+  'timeOutInterSplashAllTime', 'timeOutInterSplashLoadInterOnlyTime',
+];
+const REWARD_FIELDS = ['timeOutRewardDialog'];
+
+/** Chú thích người viết tự thêm vào JSON. Không phải cấu hình, đừng đụng tới. */
+const META_FIELDS = new Set(['_comment', '_note', '_todo']);
+
+/** Mọi field đã biết — dùng để phát hiện tên viết sai. */
+const KNOWN_CONFIG_FIELDS = new Set([
+  'configName', 'isOn', 'type',
+  ...NATIVE_FIELDS, ...INTER_FIELDS, ...REWARD_FIELDS, ...META_FIELDS,
+]);
 
 const TEMPLATE_GROUPS = [
   'listTemplateSmall', 'listTemplateMedium', 'listTemplateLarge',
@@ -280,6 +293,18 @@ for (const conf of listConfig) {
   if (!isInter) {
     const strays = INTER_FIELDS.filter((f) => f in conf);
     if (strays.length) WARN('CFG_INTER_FIELDS', `"${name}" (${conf.type}) mang field chỉ dành cho interstitial: ${strays.join(', ')}`, name);
+  }
+  if (!String(conf.type).startsWith('reward')) {
+    const strays = REWARD_FIELDS.filter((f) => f in conf);
+    if (strays.length) WARN('CFG_REWARD_FIELDS', `"${name}" (${conf.type}) mang field chỉ dành cho reward: ${strays.join(', ')}`, name);
+  }
+
+  // Field không nằm trong schema đã biết. Thường là tên viết sai — và một tên viết sai
+  // thì SDK đọc ra undefined, im lặng dùng giá trị mặc định, nên không có triệu chứng nào
+  // ngoài việc cấu hình bạn vừa chỉnh không có tác dụng.
+  const unknown = Object.keys(conf).filter((f) => !KNOWN_CONFIG_FIELDS.has(f));
+  if (unknown.length) {
+    CHECK('CFG_FIELD_UNKNOWN', `"${name}" có field chưa nằm trong schema đã biết: ${unknown.join(', ')} — kiểm tra xem có phải viết sai tên không`, name);
   }
 
   if (nativeFieldsAllowed) {
