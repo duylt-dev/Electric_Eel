@@ -84,6 +84,17 @@ const PLACEHOLDER_IDS = new Set(['test', 'TEST', 'demo', 'DEMO', '']);
  */
 const isDemoSlot = (name) => /^demo(_|$)/i.test(String(name || ''));
 
+/**
+ * Slot SDK gọi thẳng theo tên cố định, không tra qua `listConfig`. Chúng đúng là không có
+ * configName tương ứng, nên báo "không nối được" ở đây là báo động giả. Xác nhận bởi chủ
+ * dự án 01.09.2026: kho preload interstitial và ad open_app của màn splash.
+ *
+ * Thêm pattern mới vào đây chỉ khi đã xác nhận SDK thật sự gọi thẳng — mỗi dòng thêm vào
+ * là một vùng validator thôi không soi nữa.
+ */
+const DIRECT_CALL_SLOTS = [/^preload_/i, /^splash_openad/i];
+const isDirectCallSlot = (name) => DIRECT_CALL_SLOTS.some((re) => re.test(String(name || '')));
+
 const AD_TYPES = new Set([
   'native', 'native_full_screen', 'native_interstitial', 'interstitial',
   'banner', 'banner_adaptive', 'banner_large', 'banner_inline',
@@ -221,7 +232,10 @@ for (const unit of listAds) {
   idOwners.get(id).push(unit.spaceName);
 }
 for (const [id, owners] of idOwners) {
-  if (owners.length > 1) CHECK('ID_REUSED', `Ad ID ${id} dùng chung ở ${owners.length} slot: ${owners.join(', ')}`, owners[0]);
+  if (owners.length < 2) continue;
+  // Kho preload cố ý trỏ nhiều slot vào một ad unit để tăng lượng nạp sẵn.
+  if (owners.every(isDirectCallSlot)) continue;
+  CHECK('ID_REUSED', `Ad ID ${id} dùng chung ở ${owners.length} slot: ${owners.join(', ')}`, owners[0]);
 }
 
 /* ────────────────────────── template ────────────────────────── */
@@ -395,6 +409,7 @@ const unmatchedAds = [];
 
 for (const unit of listAds) {
   if (!unit.spaceName) continue;
+  if (isDirectCallSlot(unit.spaceName)) continue;   // SDK gọi thẳng, không có config là đúng
   const hit = matchConfig(unit.spaceName);
   if (!hit) { unmatchedAds.push(unit.spaceName); continue; }
 
@@ -419,9 +434,13 @@ for (const unit of listAds) {
 if (unmatchedAds.length) {
   CHECK('XREF_AD_ORPHAN', `${unmatchedAds.length} spaceName không nối được với configName nào: ${unmatchedAds.join(', ')}`, 'admob_id');
 }
-const unmatchedConfigs = [...configCount.keys()].filter((n) => !adsByConfig.has(n));
+// Vị trí đang bật mà không có ad unit đã là ERROR riêng bên dưới, nên ở đây chỉ còn vị trí
+// đã tắt — không ảnh hưởng ai, chỉ là dọn dẹp. Nói rõ điều đó thay vì để người đọc phải
+// đối chiếu hai danh sách.
+const unmatchedConfigs = [...configCount.keys()]
+  .filter((n) => !adsByConfig.has(n) && configOf.get(n)?.isOn !== true);
 if (unmatchedConfigs.length) {
-  CHECK('XREF_CFG_ORPHAN', `${unmatchedConfigs.length} configName không có ad unit nào: ${unmatchedConfigs.join(', ')}`, 'config_show_ads');
+  CHECK('XREF_CFG_ORPHAN', `${unmatchedConfigs.length} vị trí đã tắt và không có ad unit nào — dọn được nếu app không còn dùng: ${unmatchedConfigs.join(', ')}`, 'config_show_ads');
 }
 
 const isUsableId = (unit) =>
