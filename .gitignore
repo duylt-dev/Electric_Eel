@@ -29,3 +29,24 @@ src/generated/
 
 # gitnexus
 .gitnexus/run.cjs
+
+# python cache (skill scripts trong .claude/)
+__pycache__/
+*.py[cod]
+
+# log & báo cáo test
+*.log
+npm-debug.log*
+pnpm-debug.log*
+coverage/
+test-results/
+
+# cache build/deploy
+.turbo/
+.vercel/
+
+# cấu hình máy cá nhân, không chia sẻ
+.claude/settings.local.json
+.claude/.env
+.idea/
+.vscode/
