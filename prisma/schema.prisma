@@ -1,0 +1,145 @@
+// Schema viết theo tập tính năng giao nhau giữa SQLite và PostgreSQL:
+// không enum (SQLite không hỗ trợ), không mảng vô hướng, không kiểu JSON gốc.
+// Chuyển sang Postgres về sau chỉ cần đổi `provider` rồi chạy lại migration.
+
+generator client {
+  // Generator mới của Prisma 7: sinh TypeScript thay vì JS đã đóng gói, nên
+  // Turbopack bundle được. Generator cũ `prisma-client-js` kéo theo require()
+  // các module tuỳ chọn mà bundler không giải được.
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// Tài khoản nội bộ. Không SSO — mật khẩu băm bằng bcrypt.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  /// "ADMIN" | "MEMBER". ADMIN quản trị được app và người dùng.
+  role         String   @default("MEMBER")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships AppMembership[]
+  auditLogs   AuditLog[]
+  createdApps FirebaseApp[]   @relation("AppCreator")
+
+  @@index([email])
+}
+
+/// Một project Firebase. Nhiều app dùng chung một tool — đây là ranh giới phân quyền.
+model FirebaseApp {
+  id          String   @id @default(cuid())
+  /// Định danh trên URL: /remote-config/{slug}
+  slug        String   @unique
+  displayName String
+  /// projectId của Firebase, dùng dựng URL Admin API.
+  projectId   String
+  /// applicationId của app Android, ví dụ "com.pion.lovetest". Nullable vì
+  /// những app tạo trước khi có trường này vẫn phải hợp lệ, và vì một project
+  /// Firebase có thể phục vụ nhiều package.
+  packageName String?
+  /// Service account JSON đã mã hoá AES-256-GCM. Không bao giờ rời server.
+  credentialCiphertext String?
+  /// Email của service account — hiển thị để đối chiếu, không phải bí mật.
+  credentialClientEmail String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdById String?
+  createdBy   User?    @relation("AppCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  memberships  AppMembership[]
+  auditLogs    AuditLog[]
+  paramSchemas ParamSchema[]
+
+  @@index([slug])
+}
+
+/// Quyền của một người trên một app.
+model AppMembership {
+  id     String @id @default(cuid())
+  userId String
+  appId  String
+  /// "VIEWER" | "EDITOR" | "PUBLISHER"
+  role   String @default("VIEWER")
+
+  createdAt DateTime @default(now())
+
+  user User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  app  FirebaseApp @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, appId])
+  @@index([appId])
+}
+
+/// Nhật ký thao tác. Ghi cả bản diff để truy được ai đổi gì, lúc nào.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  appId     String?
+  /// "TEMPLATE_FETCH" | "TEMPLATE_VALIDATE" | "TEMPLATE_PUBLISH" | "APP_CREATE" | ...
+  action    String
+  /// Tham số Remote Config bị tác động, nếu có.
+  targetKey String?
+  /// Tóm tắt thay đổi dạng JSON (chuỗi hoá). Không chứa credential.
+  detailJson String?
+  /// Địa chỉ IP và User-Agent của request. Không có hai trường này thì một
+  /// chuỗi LOGIN_FAILED chỉ nói "có người gõ sai mật khẩu", không nói được
+  /// đó là một người quên mật khẩu hay một máy đang dò.
+  ipAddress String?
+  userAgent String?
+  succeeded Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  user User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  app  FirebaseApp? @relation(fields: [appId], references: [id], onDelete: SetNull)
+
+  @@index([appId, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Quyết định "hybrid": hai tham số quen thuộc có form dựng sẵn trong code,
+/// còn tham số mới thì admin tự khai schema ở đây và form tự sinh theo.
+model ParamSchema {
+  id        String   @id @default(cuid())
+  /// null = schema dùng chung cho mọi app.
+  appId     String?
+  /// Khoá tham số trên Firebase Remote Config, ví dụ "config_show_ads".
+  paramKey  String
+  /// Định nghĩa schema (chuỗi JSON) — xem src/domain/schema/ParamSchema.ts.
+  schemaJson String
+  version   Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  app FirebaseApp? @relation(fields: [appId], references: [id], onDelete: Cascade)
+
+  @@unique([appId, paramKey])
+  @@index([paramKey])
+}
+
+
+/// Một lần thử thất bại, dùng để đếm nhịp (rate limit).
+///
+/// Đếm trong DB chứ không trong bộ nhớ tiến trình: bộ nhớ mất khi restart, và
+/// không chia sẻ được nếu sau này chạy nhiều instance — lúc đó mỗi instance sẽ
+/// cấp riêng cho kẻ dò một hạn mức đầy đủ.
+model RateLimitHit {
+  id String @id @default(cuid())
+  /// Khoá gộp, ví dụ "login:email:a@b.com" hoặc "login:ip:1.2.3.4".
+  bucket    String
+  createdAt DateTime @default(now())
+
+  @@index([bucket, createdAt])
+  @@index([createdAt])
+}

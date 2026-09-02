@@ -1,13 +1,31 @@
+# dependencies
 node_modules/
-dist/
-build/
+.pnpm-store/
+
+# next
 .next/
 out/
-coverage/
-*.log
+next-env.d.ts
+*.tsbuildinfo
+
+# prisma
+src/generated/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# env — không bao giờ commit
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+
+# credential Firebase tải về máy
+*service-account*.json
+!docs/*-template.json
+
+# macos
 .DS_Store
-.gitnexus/
-*.local
+
+# gitnexus
+.gitnexus/run.cjs
