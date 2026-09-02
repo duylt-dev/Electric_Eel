@@ -47,6 +47,8 @@ test-results/
 
 # cấu hình máy cá nhân, không chia sẻ
 .claude/settings.local.json
-.claude/.env
+.claude
 .idea/
 .vscode/
+LLM.md
+docs
