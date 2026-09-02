@@ -1,4 +1,5 @@
 import { HttpRemoteConfigRepository } from '@/data/remote-config/HttpRemoteConfigRepository'
+import { HttpTranslationRepository } from '@/data/translation/HttpTranslationRepository'
 
 /**
  * Composition root phía trình duyệt.
@@ -9,6 +10,8 @@ import { HttpRemoteConfigRepository } from '@/data/remote-config/HttpRemoteConfi
  */
 export const clientContainer = {
   remoteConfig: new HttpRemoteConfigRepository(),
+  /** Cổng dịch chuỗi — gọi Route Handler, không bao giờ chạm tới khoá API. */
+  translation: new HttpTranslationRepository(),
 } as const
 
 export type ClientContainer = typeof clientContainer

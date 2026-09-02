@@ -5,6 +5,8 @@ import { PrismaAuditLog } from '@/data/db/PrismaAuditLog'
 import { PrismaRateLimit } from '@/data/db/PrismaRateLimit'
 import { PrismaUserRepository } from '@/data/db/PrismaUserRepository'
 import { FirebaseRemoteConfigRepository } from '@/data/remote-config/FirebaseRemoteConfigRepository'
+import { LlmStringTranslator } from '@/data/translation/LlmStringTranslator'
+import { readRuntimeOptions, readTranslationConfig } from '@/data/translation/translationProvider'
 
 /**
  * Composition root phía server: nơi DUY NHẤT được phép nối cổng ở domain với
@@ -29,6 +31,17 @@ export const serverContainer = {
   rateLimit: new PrismaRateLimit(),
   /** Adapter Firebase lấy credential qua chính danh bạ app. */
   remoteConfig: new FirebaseRemoteConfigRepository(appDirectory),
+  /**
+   * Công cụ dịch chuỗi. `config` và `options` là HÀM chứ không phải giá trị:
+   * chúng đọc `process.env` tại thời điểm gọi, nên đổi `.env` rồi khởi động lại
+   * là đủ — không có một bản chụp cấu hình cũ nằm lại trong module suốt vòng
+   * đời tiến trình.
+   */
+  translation: {
+    translator: new LlmStringTranslator(),
+    config: () => readTranslationConfig(),
+    options: () => readRuntimeOptions(),
+  },
 } as const
 
 export type ServerContainer = typeof serverContainer

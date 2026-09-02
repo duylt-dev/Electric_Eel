@@ -47,11 +47,11 @@ export const TOOLS: readonly ToolDefinition[] = [
   },
   {
     id: 'translations',
-    label: 'Chuỗi đa ngôn ngữ',
-    description: 'Quản lý strings.xml nhiều ngôn ngữ. Chưa làm.',
+    label: 'Dịch',
+    description: 'Nạp strings.xml, dịch sang nhiều ngôn ngữ, tải về một tệp zip.',
     href: '/translations',
     icon: TranslateIcon,
-    status: 'planned',
+    status: 'available',
   },
   {
     id: 'metrics',

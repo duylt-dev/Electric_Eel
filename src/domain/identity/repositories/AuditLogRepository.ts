@@ -15,6 +15,7 @@ export type AuditAction =
   | 'LOGIN_FAILED'
   | 'LOGIN_THROTTLED'
   | 'LOGIN_SUCCEEDED'
+  | 'STRINGS_TRANSLATE'
 
 export interface AuditEntry {
   id: string
