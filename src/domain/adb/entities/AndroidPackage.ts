@@ -10,7 +10,7 @@
 export interface AndroidPackage {
   readonly packageName: string
   readonly label: string | null
-  /** Có mặt trong danh bạ app của tool. Dùng để xếp lên đầu danh sách. */
+  /** Có mặt trong danh bạ app của tool. Dùng để gắn nhãn, không đổi thứ tự. */
   readonly known: boolean
 }
 
@@ -64,8 +64,14 @@ export function parsePackagesOutput(stdout: string): string[] {
 /**
  * Gắn nhãn từ danh bạ vào danh sách package đọc được từ máy, rồi xếp thứ tự.
  *
- * App có trong danh bạ lên trước — đó là app của đội, tức là thứ người ta mở
- * logcat để xem trong chín trên mười lần. Phần còn lại xếp theo bảng chữ cái.
+ * Xếp theo applicationId từ a đến z, không nhóm app của đội lên đầu. Danh sách
+ * được chia trang nên thứ tự phải đoán trước được: biết package name thì biết
+ * nó nằm quãng nào, và trang 2 hôm nay vẫn là trang 2 ngày mai. Muốn đi thẳng
+ * tới app của mình thì gõ vào ô tìm kiếm — nhanh hơn mọi cách xếp thứ tự.
+ *
+ * Xếp theo applicationId chứ không theo nhãn: nhãn chỉ có ở app trong danh bạ,
+ * lấy nó làm khoá thì hai app cạnh nhau xếp theo hai loại khoá khác nhau và
+ * thứ tự nhìn như ngẫu nhiên.
  */
 export function buildPackageList(
   names: readonly string[],
@@ -80,10 +86,7 @@ export function buildPackageList(
         known: label !== undefined,
       }
     })
-    .sort((left, right) => {
-      if (left.known !== right.known) return left.known ? -1 : 1
-      return (left.label ?? left.packageName).localeCompare(right.label ?? right.packageName, 'vi')
-    })
+    .sort((left, right) => left.packageName.localeCompare(right.packageName, 'en'))
 }
 
 /** Lọc danh sách theo ô tìm kiếm: khớp cả tên hiển thị lẫn applicationId. */

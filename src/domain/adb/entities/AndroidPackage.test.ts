@@ -44,16 +44,16 @@ describe('isSafePackageName', () => {
 describe('buildPackageList', () => {
   const labels = new Map([['com.pion.lovetest', 'Love Test']])
 
-  it('app trong danh bạ lên trước, phần còn lại theo bảng chữ cái', () => {
+  it('xếp theo package name từ a đến z, không nhóm app trong danh bạ lên đầu', () => {
     const list = buildPackageList(['com.zalo', 'com.pion.lovetest', 'com.abc'], labels)
 
     assert.deepEqual(
       list.map((item) => item.packageName),
-      ['com.pion.lovetest', 'com.abc', 'com.zalo'],
+      ['com.abc', 'com.pion.lovetest', 'com.zalo'],
     )
-    assert.equal(list[0]?.label, 'Love Test')
-    assert.equal(list[0]?.known, true)
-    assert.equal(list[1]?.label, null)
+    assert.equal(list[0]?.label, null)
+    assert.equal(list[1]?.label, 'Love Test')
+    assert.equal(list[1]?.known, true)
   })
 })
 
