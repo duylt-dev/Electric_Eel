@@ -16,6 +16,7 @@ export type AuditAction =
   | 'LOGIN_THROTTLED'
   | 'LOGIN_SUCCEEDED'
   | 'STRINGS_TRANSLATE'
+  | 'LOGCAT_STREAM'
 
 export interface AuditEntry {
   id: string

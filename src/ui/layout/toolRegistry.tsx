@@ -1,5 +1,6 @@
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import HistoryIcon from '@mui/icons-material/History'
+import TerminalIcon from '@mui/icons-material/Terminal'
 import InsightsIcon from '@mui/icons-material/Insights'
 import TranslateIcon from '@mui/icons-material/Translate'
 import TuneIcon from '@mui/icons-material/Tune'
@@ -51,6 +52,14 @@ export const TOOLS: readonly ToolDefinition[] = [
     description: 'Nạp strings.xml, dịch sang nhiều ngôn ngữ, tải về một tệp zip.',
     href: '/translations',
     icon: TranslateIcon,
+    status: 'available',
+  },
+  {
+    id: 'logcat',
+    label: 'Logcat',
+    description: 'Chọn máy, chọn app, xem log của riêng app đó — không lẫn log máy.',
+    href: '/logcat',
+    icon: TerminalIcon,
     status: 'available',
   },
   {

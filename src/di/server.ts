@@ -1,5 +1,7 @@
 import 'server-only'
 
+import { ProcessAdbShell } from '@/data/adb/ProcessAdbShell'
+import { readAdbSettings } from '@/data/adb/adbSettings'
 import { PrismaAppDirectory } from '@/data/db/PrismaAppDirectory'
 import { PrismaAuditLog } from '@/data/db/PrismaAuditLog'
 import { PrismaRateLimit } from '@/data/db/PrismaRateLimit'
@@ -41,6 +43,18 @@ export const serverContainer = {
     translator: new LlmStringTranslator(),
     config: () => readTranslationConfig(),
     options: () => readRuntimeOptions(),
+  },
+  /**
+   * Công cụ Logcat. `settings` là HÀM vì cùng một lý do như `translation`:
+   * nó đọc `process.env` lúc gọi, nên đổi `ADB_PATH` rồi khởi động lại là đủ.
+   *
+   * Chỉ có `shell` ở đây, không có repository nào. Mọi lệnh adb đều đi qua các
+   * use case trong `domain/adb/usecases` — đó là chỗ duy nhất biết cách dựng
+   * tham số dòng lệnh, và cũng là chỗ duy nhất kiểm tra chúng.
+   */
+  adb: {
+    shell: new ProcessAdbShell(),
+    settings: () => readAdbSettings(),
   },
 } as const
 

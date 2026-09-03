@@ -36,6 +36,7 @@ const ACTION_LABEL: Record<AuditAction, string> = {
   LOGIN_THROTTLED: 'Bị chặn vì thử quá nhiều',
   LOGIN_SUCCEEDED: 'Đăng nhập',
   STRINGS_TRANSLATE: 'Dịch',
+  LOGCAT_STREAM: 'Xem logcat',
 }
 
 const formatTime = (value: Date): string =>
