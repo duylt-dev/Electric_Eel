@@ -8,7 +8,6 @@ import { translateStringsFile } from '@/domain/translation/usecases/translateStr
 import { MAX_APP_DESCRIPTION_LENGTH, MAX_APP_NAME_LENGTH } from '@/domain/translation/entities/TranslationSettings'
 import { MAX_SOURCE_BYTES, validateStringsXml } from '@/domain/translation/validation/validateStringsXml'
 import { jsonError, readJsonBody } from '@/lib/api/response'
-import { requestInfo } from '@/lib/requestInfo'
 import { requireUser } from '@/lib/session'
 
 /**
@@ -143,11 +142,6 @@ export async function POST(request: Request) {
 
   const options = serverContainer.translation.options()
 
-  // `headers()` chỉ đọc được trong phạm vi request, mà thân luồng bên dưới chạy
-  // sau khi handler đã trả về. Chụp lại ở đây.
-  const origin = await requestInfo()
-  const startedAt = Date.now()
-
   const encoder = new TextEncoder()
 
   const stream = new ReadableStream<Uint8Array>({
@@ -189,19 +183,7 @@ export async function POST(request: Request) {
         request.signal,
       )
 
-      const record = async (succeeded: boolean, detail: string): Promise<void> => {
-        await serverContainer.audit.record({
-          ...origin,
-          action: 'STRINGS_TRANSLATE',
-          userId: user.value.id,
-          targetKey: appName,
-          detail,
-          succeeded,
-        })
-      }
-
       if (!translated.ok) {
-        await record(false, translated.error.message)
         send({
           type: 'failed',
           kind: translated.error.kind,
@@ -216,14 +198,6 @@ export async function POST(request: Request) {
       const zip = buildZipArchive(
         translated.value.files.map((file) => ({ path: file.path, content: file.xml })),
         at,
-      )
-
-      const seconds = Math.round((Date.now() - startedAt) / 1000)
-      const failedCount = translated.value.failed.length
-      await record(
-        failedCount === 0,
-        `${translator.label}, ${languages.length} ngôn ngữ, ${translated.value.chunkCount} mẻ, ${seconds}s` +
-          (failedCount === 0 ? '' : `, hỏng ${failedCount}: ${translated.value.failed.map((f) => f.code).join(', ')}`),
       )
 
       send({

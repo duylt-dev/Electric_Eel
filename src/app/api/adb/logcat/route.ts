@@ -6,7 +6,6 @@ import type { LogcatEvent, LogcatRequest } from '@/domain/adb/entities/LogcatSes
 import { clearLogcatBuffer } from '@/domain/adb/usecases/adbCommands'
 import { followAppLogcat } from '@/domain/adb/usecases/followAppLogcat'
 import { jsonError, jsonOk } from '@/lib/api/response'
-import { requestInfo } from '@/lib/requestInfo'
 import { requireUser } from '@/lib/session'
 
 /**
@@ -64,15 +63,6 @@ export async function POST(request: Request) {
   }
 
   const clearFirst = body?.clearFirst === true
-  const origin = await requestInfo()
-
-  await serverContainer.audit.record({
-    ...origin,
-    action: 'LOGCAT_STREAM',
-    userId: user.value.id,
-    targetKey: packageName,
-    detail: `thiết bị ${serial}`,
-  })
 
   const encoder = new TextEncoder()
 
