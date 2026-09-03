@@ -28,7 +28,10 @@ export interface LogcatPickerState {
 
   readonly packagesStatus: PackageListStatus
   /**
-   * applicationId trần, đúng thứ tự máy trả về.
+   * applicationId trần của các app CÀI THÊM, đúng thứ tự máy trả về.
+   *
+   * App hệ thống không bao giờ có trong này và không có công tắc để bật —
+   * `pm list packages -3` là cố định ở tầng use case.
    *
    * Nhãn và thứ tự hiển thị KHÔNG nằm ở đây: chúng phụ thuộc danh bạ app, mà
    * danh bạ là dữ liệu của trang chứ không của thiết bị. Màn hình ghép hai thứ
@@ -36,11 +39,6 @@ export interface LogcatPickerState {
    * mà không cần ViewModel biết gì về việc đó.
    */
   readonly packageNames: readonly string[]
-  /** Gồm cả app hệ thống. Mặc định tắt: chúng nhiều gấp năm và hiếm khi cần. */
-  readonly includeSystem: boolean
-
-  readonly connectAddress: string
-  readonly connecting: boolean
 
   readonly error: AppError | null
 }
@@ -51,9 +49,6 @@ export const initialLogcatPickerState: LogcatPickerState = {
   selectedSerial: null,
   packagesStatus: 'idle',
   packageNames: [],
-  includeSystem: false,
-  connectAddress: '',
-  connecting: false,
   error: null,
 }
 
@@ -62,11 +57,7 @@ export const initialLogcatPickerState: LogcatPickerState = {
 export type LogcatPickerIntent =
   | { type: 'DevicesRefreshRequested' }
   | { type: 'DeviceSelected'; serial: string }
-  | { type: 'SystemAppsToggled'; value: boolean }
   | { type: 'PackagesRefreshRequested' }
-  | { type: 'ConnectAddressChanged'; value: string }
-  | { type: 'ConnectRequested' }
-  | { type: 'DisconnectRequested'; serial: string }
   /**
    * Bấm vào một app trong danh sách.
    *

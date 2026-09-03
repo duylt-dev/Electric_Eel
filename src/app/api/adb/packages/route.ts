@@ -28,9 +28,7 @@ export async function GET(request: Request) {
     return jsonError(AppErrors.validation('Thiếu serial thiết bị.'))
   }
 
-  const includeSystem = params.get('system') === '1'
-
-  const packages = await listPackages(serverContainer.adb.shell, serial, includeSystem, request.signal)
+  const packages = await listPackages(serverContainer.adb.shell, serial, request.signal)
   if (!packages.ok) return jsonError(packages.error)
 
   return jsonOk({ packages: packages.value })

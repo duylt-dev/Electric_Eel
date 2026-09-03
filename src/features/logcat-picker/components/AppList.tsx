@@ -211,8 +211,7 @@ function NoMatch({ query, onClear }: { query: string; onClear: () => void }) {
           {query.length === 0 ? 'Máy này chưa có app nào cài thêm' : `Không app nào khớp “${query}”`}
         </Typography>
         <Typography variant="body2" sx={{ color: m3('onSurfaceVariant'), mt: 1, maxWidth: '52ch' }}>
-          Danh sách mặc định chỉ gồm app cài thêm. Bật “kể cả app hệ thống” nếu thứ bạn cần debug
-          nằm trong ROM.
+          Danh sách chỉ gồm app cài thêm — app hệ thống trong ROM không bao giờ hiện ở đây.
         </Typography>
       </Box>
       {query.length > 0 && (

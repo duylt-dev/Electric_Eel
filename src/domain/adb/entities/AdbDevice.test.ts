@@ -1,28 +1,22 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import {
-  deviceLabel,
-  isSafeConnectAddress,
-  isSafeSerial,
-  parseDevicesOutput,
-} from './AdbDevice'
+import { deviceLabel, isSafeSerial, parseDevicesOutput } from './AdbDevice'
 
 describe('parseDevicesOutput', () => {
-  it('đọc được cả máy USB lẫn máy nối qua mạng', () => {
+  it('đọc serial, trạng thái và model của từng máy', () => {
     const devices = parseDevicesOutput(
       [
         'List of devices attached',
         'emulator-5554          device product:sdk_gphone64_arm64 model:sdk_gphone64_arm64 transport_id:1',
-        '192.168.1.20:5555      device product:oriole model:Pixel_6 transport_id:3',
+        'R58M12ABCDE            device product:oriole model:Pixel_6 transport_id:3',
       ].join('\n'),
     )
 
     assert.equal(devices.length, 2)
     assert.equal(devices[0]?.serial, 'emulator-5554')
     assert.equal(devices[0]?.model, 'sdk_gphone64_arm64')
-    assert.equal(devices[0]?.overNetwork, false)
-    assert.equal(devices[1]?.overNetwork, true)
+    assert.equal(devices[1]?.serial, 'R58M12ABCDE')
     assert.equal(devices[1]?.model, 'Pixel_6')
   })
 
@@ -68,31 +62,17 @@ describe('isSafeSerial', () => {
   })
 })
 
-describe('isSafeConnectAddress', () => {
-  it('nhận host và host:port', () => {
-    assert.equal(isSafeConnectAddress('192.168.1.20'), true)
-    assert.equal(isSafeConnectAddress('192.168.1.20:5555'), true)
-    assert.equal(isSafeConnectAddress('pixel-6.local:5555'), true)
-  })
-
-  it('từ chối cổng ngoài dải và địa chỉ có ký tự lạ', () => {
-    assert.equal(isSafeConnectAddress('192.168.1.20:0'), false)
-    assert.equal(isSafeConnectAddress('192.168.1.20:70000'), false)
-    assert.equal(isSafeConnectAddress('192.168.1.20 && id'), false)
-  })
-})
-
 describe('deviceLabel', () => {
   it('ưu tiên model, và thay gạch dưới bằng khoảng trắng', () => {
     assert.equal(
-      deviceLabel({ serial: 'x', state: 'device', model: 'Pixel_6', product: null, overNetwork: false }),
+      deviceLabel({ serial: 'x', state: 'device', model: 'Pixel_6', product: null }),
       'Pixel 6',
     )
   })
 
   it('lùi về serial khi adb không nói model', () => {
     assert.equal(
-      deviceLabel({ serial: 'R58M12', state: 'device', model: null, product: null, overNetwork: false }),
+      deviceLabel({ serial: 'R58M12', state: 'device', model: null, product: null }),
       'R58M12',
     )
   })

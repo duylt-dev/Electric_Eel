@@ -72,7 +72,7 @@ async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boole
       severity: usable === 0 ? 'info' : 'success',
       message:
         usable === 0
-          ? 'Không thấy thiết bị nào. Cắm máy qua USB và bật gỡ lỗi USB, hoặc nối qua mạng.'
+          ? 'Không thấy thiết bị nào. Cắm máy qua USB và bật gỡ lỗi USB.'
           : `Thấy ${usable} thiết bị sẵn sàng.`,
     })
   }
@@ -87,7 +87,7 @@ async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boole
 async function loadPackages(ctx: Context, deps: LogcatPickerDeps, serial: string): Promise<void> {
   ctx.setState((state) => ({ ...state, packagesStatus: 'loading', error: null }))
 
-  const packages = await deps.adb.listPackages(serial, ctx.getState().includeSystem, ctx.signal)
+  const packages = await deps.adb.listPackages(serial, ctx.signal)
   if (ctx.signal.aborted) return
 
   if (!packages.ok) {
@@ -101,37 +101,6 @@ async function loadPackages(ctx: Context, deps: LogcatPickerDeps, serial: string
     packagesStatus: 'ready',
     packageNames: packages.value,
   }))
-}
-
-async function connect(ctx: Context, deps: LogcatPickerDeps): Promise<void> {
-  const address = ctx.getState().connectAddress.trim()
-  if (address.length === 0) {
-    ctx.emit({ type: 'ShowMessage', severity: 'error', message: 'Chưa nhập địa chỉ máy.' })
-    return
-  }
-
-  ctx.setState((state) => ({ ...state, connecting: true, error: null }))
-  const devices = await deps.adb.connect(address, ctx.signal)
-  if (ctx.signal.aborted) return
-
-  if (!devices.ok) {
-    ctx.setState((state) => ({ ...state, connecting: false, error: devices.error }))
-    ctx.emit({ type: 'ShowMessage', severity: 'error', message: devices.error.message })
-    return
-  }
-
-  ctx.setState((state) => ({
-    ...state,
-    connecting: false,
-    status: 'ready',
-    devices: devices.value,
-    selectedSerial: autoSelect(devices.value, state.selectedSerial),
-    connectAddress: '',
-  }))
-  ctx.emit({ type: 'ShowMessage', severity: 'success', message: `Đã nối tới ${address}.` })
-
-  const serial = ctx.getState().selectedSerial
-  if (serial !== null) await loadPackages(ctx, deps, serial)
 }
 
 export const LogcatPickerViewModel = defineViewModel<
@@ -156,8 +125,7 @@ export const LogcatPickerViewModel = defineViewModel<
    * không theo thứ tự bấm. Dùng chung khoá thì lượt mới huỷ lượt cũ, và thứ
    * hiển thị luôn là kết quả của thao tác cuối cùng.
    */
-  intentKey: (intent) =>
-    intent.type === 'AppOpened' || intent.type === 'ConnectAddressChanged' ? undefined : 'adb',
+  intentKey: (intent) => (intent.type === 'AppOpened' ? undefined : 'adb'),
 
   async handleIntent(intent, ctx, deps) {
     switch (intent.type) {
@@ -176,13 +144,6 @@ export const LogcatPickerViewModel = defineViewModel<
         return
       }
 
-      case 'SystemAppsToggled': {
-        ctx.setState((state) => ({ ...state, includeSystem: intent.value }))
-        const serial = ctx.getState().selectedSerial
-        if (serial !== null) await loadPackages(ctx, deps, serial)
-        return
-      }
-
       case 'PackagesRefreshRequested': {
         const serial = ctx.getState().selectedSerial
         if (serial === null) {
@@ -190,30 +151,6 @@ export const LogcatPickerViewModel = defineViewModel<
           return
         }
         await loadPackages(ctx, deps, serial)
-        return
-      }
-
-      case 'ConnectAddressChanged':
-        ctx.setState((state) => ({ ...state, connectAddress: intent.value }))
-        return
-
-      case 'ConnectRequested':
-        await connect(ctx, deps)
-        return
-
-      case 'DisconnectRequested': {
-        const devices = await deps.adb.disconnect(intent.serial, ctx.signal)
-        if (ctx.signal.aborted) return
-        if (!devices.ok) {
-          ctx.emit({ type: 'ShowMessage', severity: 'error', message: devices.error.message })
-          return
-        }
-        ctx.setState((state) => ({
-          ...state,
-          devices: devices.value,
-          selectedSerial: autoSelect(devices.value, state.selectedSerial),
-        }))
-        ctx.emit({ type: 'ShowMessage', severity: 'info', message: 'Đã ngắt kết nối.' })
         return
       }
 
@@ -242,7 +179,7 @@ export const LogcatPickerViewModel = defineViewModel<
   },
 
   onError: (error, _intent, ctx) => {
-    ctx.setState((state) => ({ ...state, status: 'failed', connecting: false, error }))
+    ctx.setState((state) => ({ ...state, status: 'failed', error }))
     ctx.emit({ type: 'ShowMessage', severity: 'error', message: error.message })
   },
 

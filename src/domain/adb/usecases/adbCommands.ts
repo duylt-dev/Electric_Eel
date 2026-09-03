@@ -1,5 +1,5 @@
 import { AppErrors, type Result, err, ok } from '../../../core/result'
-import { isSafeConnectAddress, isSafeSerial, parseDevicesOutput } from '../entities/AdbDevice'
+import { isSafeSerial, parseDevicesOutput } from '../entities/AdbDevice'
 import type { AdbDevice } from '../entities/AdbDevice'
 import { isSafePackageName, parsePackagesOutput } from '../entities/AndroidPackage'
 import type { AdbRunOutput, AdbShell } from '../repositories/AdbShell'
@@ -32,7 +32,7 @@ function commandFailure(output: AdbRunOutput, fallback: string): Result<never> {
     )
   }
   if (lower.includes('device offline')) {
-    return err(AppErrors.upstream('Thiết bị đang offline. Rút cáp cắm lại, hoặc nối lại qua mạng.'))
+    return err(AppErrors.upstream('Thiết bị đang offline. Rút cáp cắm lại rồi bấm làm mới.'))
   }
   if (lower.includes('device not found') || lower.includes("device '") || lower.includes('no devices')) {
     return err(AppErrors.notFound('Không còn thấy thiết bị này. Bấm làm mới danh sách.'))
@@ -56,59 +56,20 @@ export async function listDevices(
 }
 
 /**
- * `adb connect host:port`.
+ * applicationId của các app CÀI THÊM trên máy.
  *
- * adb THOÁT 0 kể cả khi không nối được — nó chỉ in "failed to connect" ra
- * stdout. Vì vậy ở đây phải đọc chữ, không đọc mã thoát; tin vào mã thoát thì
- * một địa chỉ gõ sai sẽ hiện ra như một lần nối thành công.
+ * `-3` là cố định, không phải tuỳ chọn: app hệ thống nhiều gấp năm và không ai
+ * trong đội đọc log của chúng, nên để chúng lọt vào chỉ làm app cần tìm chìm
+ * giữa vài trăm package của ROM.
  */
-export async function connectDevice(
-  shell: AdbShell,
-  address: string,
-  signal?: AbortSignal,
-): Promise<Result<void>> {
-  if (!isSafeConnectAddress(address)) {
-    return err(AppErrors.validation('Địa chỉ phải có dạng 192.168.1.20:5555 hoặc tên máy.'))
-  }
-
-  const output = await shell.run({ args: ['connect', address], timeoutMs: 20_000 }, signal)
-  if (!output.ok) return output
-
-  const said = `${output.value.stdout}\n${output.value.stderr}`.toLowerCase()
-  if (!succeeded(output.value) || said.includes('failed to connect') || said.includes('cannot connect')) {
-    return err(
-      AppErrors.upstream(`Không nối được tới ${address}.`, {
-        detail: `${output.value.stdout.trim()} ${output.value.stderr.trim()}`.trim(),
-      }),
-    )
-  }
-  return ok(undefined)
-}
-
-export async function disconnectDevice(
-  shell: AdbShell,
-  address: string,
-  signal?: AbortSignal,
-): Promise<Result<void>> {
-  if (!isSafeConnectAddress(address)) {
-    return err(AppErrors.validation('Địa chỉ không hợp lệ.'))
-  }
-  const output = await shell.run({ args: ['disconnect', address], timeoutMs: 15_000 }, signal)
-  if (!output.ok) return output
-  return ok(undefined)
-}
-
 export async function listPackages(
   shell: AdbShell,
   serial: string,
-  includeSystem: boolean,
   signal?: AbortSignal,
 ): Promise<Result<string[]>> {
   if (!isSafeSerial(serial)) return err(AppErrors.validation('Serial thiết bị không hợp lệ.'))
 
-  // `-3` = chỉ app cài thêm. Không có nó thì danh sách dài gấp năm và app của
-  // đội chìm giữa vài trăm package hệ thống.
-  const args = ['shell', 'pm', 'list', 'packages', ...(includeSystem ? [] : ['-3'])]
+  const args = ['shell', 'pm', 'list', 'packages', '-3']
   const output = await shell.run({ serial, args, timeoutMs: 30_000 }, signal)
   if (!output.ok) return output
   if (!succeeded(output.value)) {

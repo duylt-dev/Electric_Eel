@@ -5,7 +5,6 @@ import { ok } from '../../../core/result'
 import type { Result } from '../../../core/result'
 import type { AdbCommand, AdbExit, AdbRunOutput, AdbShell } from '../repositories/AdbShell'
 import {
-  connectDevice,
   listPackages,
   parsePidofOutput,
   parsePsOutput,
@@ -59,48 +58,17 @@ describe('parsePsOutput', () => {
   })
 })
 
-describe('connectDevice', () => {
-  it('coi "failed to connect" là hỏng, dù adb thoát 0', () => {
-    // adb THOÁT 0 kể cả khi không nối được. Tin vào mã thoát thì một địa chỉ gõ
-    // sai sẽ hiện ra như một lần nối thành công.
-    const shell = shellReturning({
-      stdout: 'failed to connect to 192.168.1.99:5555\n',
-      stderr: '',
-      code: 0,
-    })
-
-    return connectDevice(shell, '192.168.1.99:5555').then((result) => {
-      assert.equal(result.ok, false)
-    })
-  })
-
-  it('chặn địa chỉ không hợp lệ trước khi chạy lệnh nào', async () => {
-    const shell = shellReturning({ stdout: '', stderr: '', code: 0 })
-    const result = await connectDevice(shell, '192.168.1.20 && id')
-
-    assert.equal(result.ok, false)
-    assert.equal(shell.commands.length, 0)
-  })
-})
-
 describe('listPackages', () => {
-  it('mặc định chỉ lấy app cài thêm', async () => {
+  it('luôn kèm `-3`: app hệ thống không có đường nào lọt vào danh sách', async () => {
     const shell = shellReturning({ stdout: 'package:com.a\n', stderr: '', code: 0 })
-    await listPackages(shell, 'emulator-5554', false)
+    await listPackages(shell, 'emulator-5554')
 
     assert.deepEqual(shell.commands[0], ['-s', 'emulator-5554', 'shell', 'pm', 'list', 'packages', '-3'])
   })
 
-  it('bỏ `-3` khi người dùng muốn cả app hệ thống', async () => {
-    const shell = shellReturning({ stdout: '', stderr: '', code: 0 })
-    await listPackages(shell, 'emulator-5554', true)
-
-    assert.deepEqual(shell.commands[0], ['-s', 'emulator-5554', 'shell', 'pm', 'list', 'packages'])
-  })
-
   it('dịch "device unauthorized" thành câu nói được phải làm gì', async () => {
     const shell = shellReturning({ stdout: '', stderr: 'error: device unauthorized.\n', code: 1 })
-    const result = await listPackages(shell, 'emulator-5554', false)
+    const result = await listPackages(shell, 'emulator-5554')
 
     assert.equal(result.ok, false)
     if (!result.ok) {

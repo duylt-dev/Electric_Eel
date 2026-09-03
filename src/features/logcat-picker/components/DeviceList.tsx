@@ -1,13 +1,9 @@
 'use client'
 
-import LinkOffIcon from '@mui/icons-material/LinkOff'
 import PhoneAndroidIcon from '@mui/icons-material/PhoneAndroid'
-import WifiIcon from '@mui/icons-material/Wifi'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
-import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
-import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 
 import { deviceLabel, isUsable, stateLabel } from '@/domain/adb/entities/AdbDevice'
@@ -26,10 +22,9 @@ export interface DeviceListProps {
   devices: readonly AdbDevice[]
   selectedSerial: string | null
   onSelect: (serial: string) => void
-  onDisconnect: (serial: string) => void
 }
 
-export function DeviceList({ devices, selectedSerial, onSelect, onDisconnect }: DeviceListProps) {
+export function DeviceList({ devices, selectedSerial, onSelect }: DeviceListProps) {
   return (
     <Box
       sx={{
@@ -46,7 +41,6 @@ export function DeviceList({ devices, selectedSerial, onSelect, onDisconnect }: 
           <Box
             key={device.serial}
             sx={{
-              position: 'relative',
               borderRadius: `${m3Shape.large}px`,
               border: `1px solid ${selected ? m3('primary') : m3('outlineVariant')}`,
               backgroundColor: selected ? m3('primaryContainer') : m3('surfaceContainerLow'),
@@ -61,7 +55,7 @@ export function DeviceList({ devices, selectedSerial, onSelect, onDisconnect }: 
             >
               <Stack direction="row" sx={{ gap: 3, alignItems: 'flex-start', minWidth: 0, width: '100%' }}>
                 <Box sx={{ color: selected ? m3('onPrimaryContainer') : m3('onSurfaceVariant'), mt: 0.5 }}>
-                  {device.overNetwork ? <WifiIcon /> : <PhoneAndroidIcon />}
+                  <PhoneAndroidIcon />
                 </Box>
 
                 <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -91,19 +85,6 @@ export function DeviceList({ devices, selectedSerial, onSelect, onDisconnect }: 
                 </Box>
               </Stack>
             </ButtonBase>
-
-            {device.overNetwork && (
-              <Tooltip title="Ngắt kết nối mạng tới máy này">
-                <IconButton
-                  size="small"
-                  aria-label={`Ngắt kết nối ${device.serial}`}
-                  onClick={() => onDisconnect(device.serial)}
-                  sx={{ position: 'absolute', top: 6, right: 6 }}
-                >
-                  <LinkOffIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
           </Box>
         )
       })}

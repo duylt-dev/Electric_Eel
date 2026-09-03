@@ -5,12 +5,9 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import CircularProgress from '@mui/material/CircularProgress'
-import FormControlLabel from '@mui/material/FormControlLabel'
 import LinearProgress from '@mui/material/LinearProgress'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
-import Switch from '@mui/material/Switch'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
@@ -129,7 +126,7 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
         <Box>
           <SectionHeading
             title="Thiết bị"
-            hint="adb chạy trên máy chủ đang phục vụ trang này. Máy nào cắm vào đó thì hiện ở đây."
+            hint="adb chạy trên máy chủ đang phục vụ trang này. Máy nào cắm cáp vào đó thì hiện ở đây."
           />
 
           {state.status === 'loading' && state.devices.length === 0 ? (
@@ -141,77 +138,33 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
             </Stack>
           ) : state.devices.length === 0 ? (
             <Alert severity="info" sx={{ mt: 2 }}>
-              adb không thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b>, hoặc nối qua mạng bằng ô bên
-              dưới. Nhớ rằng adb chạy trên máy chủ đang phục vụ trang này — nếu trang không chạy trên
-              máy của bạn thì máy cắm vào bàn bạn sẽ không hiện ra ở đây.
+              adb không thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b>. Nhớ rằng adb chạy trên máy
+              chủ đang phục vụ trang này — nếu trang không chạy trên máy của bạn thì máy cắm vào bàn
+              bạn sẽ không hiện ra ở đây.
             </Alert>
           ) : (
             <DeviceList
               devices={state.devices}
               selectedSerial={state.selectedSerial}
               onSelect={(serial) => onIntent({ type: 'DeviceSelected', serial })}
-              onDisconnect={(serial) => onIntent({ type: 'DisconnectRequested', serial })}
             />
           )}
-
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            component="form"
-            onSubmit={(event) => {
-              event.preventDefault()
-              onIntent({ type: 'ConnectRequested' })
-            }}
-            sx={{ gap: 3, alignItems: { sm: 'center' }, mt: 4 }}
-          >
-            <TextField
-              size="small"
-              value={state.connectAddress}
-              onChange={(event) => onIntent({ type: 'ConnectAddressChanged', value: event.target.value })}
-              placeholder="192.168.1.20:5555"
-              sx={{ maxWidth: 280, width: '100%' }}
-              slotProps={{ htmlInput: { 'aria-label': 'Địa chỉ thiết bị nối qua mạng' } }}
-            />
-            <Button type="submit" variant="text" disabled={state.connecting}>
-              {state.connecting ? 'Đang nối…' : 'Nối qua mạng'}
-            </Button>
-            <Typography variant="caption" sx={{ color: m3('onSurfaceVariant') }}>
-              Máy phải bật sẵn <code>adb tcpip 5555</code> và cùng mạng với máy chủ.
-            </Typography>
-          </Stack>
         </Box>
 
         <Box>
           <SectionHeading
             title="App trên máy"
-            hint="Bấm vào một app để mở màn log của riêng nó. App của đội hiện tên; app khác hiện package name."
+            hint="Chỉ app cài thêm. Bấm vào một app để mở màn log của riêng nó — app của đội hiện tên, app khác hiện package name."
             actions={
-              <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      size="small"
-                      checked={state.includeSystem}
-                      onChange={(event) =>
-                        onIntent({ type: 'SystemAppsToggled', value: event.target.checked })
-                      }
-                    />
-                  }
-                  label={
-                    <Typography variant="caption" sx={{ color: m3('onSurfaceVariant') }}>
-                      kể cả app hệ thống
-                    </Typography>
-                  }
-                />
-                <Button
-                  size="small"
-                  variant="text"
-                  startIcon={<RefreshIcon fontSize="small" />}
-                  onClick={() => onIntent({ type: 'PackagesRefreshRequested' })}
-                  disabled={device === null || state.packagesStatus === 'loading'}
-                >
-                  Làm mới
-                </Button>
-              </Stack>
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<RefreshIcon fontSize="small" />}
+                onClick={() => onIntent({ type: 'PackagesRefreshRequested' })}
+                disabled={device === null || state.packagesStatus === 'loading'}
+              >
+                Làm mới
+              </Button>
             }
           />
 

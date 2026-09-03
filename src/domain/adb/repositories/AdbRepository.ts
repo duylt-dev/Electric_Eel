@@ -14,16 +14,8 @@ import type { LogcatEvent, LogcatRequest } from '../entities/LogcatSession'
 export interface AdbRepository {
   listDevices(signal?: AbortSignal): Promise<Result<AdbDevice[]>>
 
-  /** `adb connect <host:port>`. Trả về danh sách thiết bị sau khi nối. */
-  connect(address: string, signal?: AbortSignal): Promise<Result<AdbDevice[]>>
-  disconnect(address: string, signal?: AbortSignal): Promise<Result<AdbDevice[]>>
-
-  /** applicationId của các app trên máy. `includeSystem` mở rộng ra cả app hệ thống. */
-  listPackages(
-    serial: string,
-    includeSystem: boolean,
-    signal?: AbortSignal,
-  ): Promise<Result<string[]>>
+  /** applicationId của các app CÀI THÊM trên máy. App hệ thống không bao giờ có mặt. */
+  listPackages(serial: string, signal?: AbortSignal): Promise<Result<string[]>>
 
   /** `adb logcat -c` — xoá đệm log NẰM TRÊN MÁY, không phải xoá màn hình. */
   clearBuffer(serial: string, signal?: AbortSignal): Promise<Result<void>>

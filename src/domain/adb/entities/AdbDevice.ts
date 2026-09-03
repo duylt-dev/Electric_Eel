@@ -20,8 +20,6 @@ export interface AdbDevice {
   /** Tên máy do nhà sản xuất đặt, ví dụ `SM_A546E`. `null` khi adb không nói. */
   readonly model: string | null
   readonly product: string | null
-  /** Nối qua mạng (`adb connect host:port`) chứ không phải qua cáp USB. */
-  readonly overNetwork: boolean
 }
 
 /**
@@ -36,25 +34,6 @@ export interface AdbDevice {
 const SERIAL = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
 
 export const isSafeSerial = (value: string): boolean => SERIAL.test(value)
-
-/**
- * Địa chỉ dùng cho `adb connect`: `host` hoặc `host:port`.
- *
- * Chỉ nhận tên miền và IPv4. IPv6 phải bọc ngoặc vuông và kéo theo một mớ luật
- * riêng cho một trường hợp gần như không gặp trong mạng LAN của một đội mobile.
- */
-const CONNECT_ADDRESS = /^[A-Za-z0-9][A-Za-z0-9.-]{0,252}(:\d{1,5})?$/
-
-export function isSafeConnectAddress(value: string): boolean {
-  if (!CONNECT_ADDRESS.test(value)) return false
-  const [, port] = value.split(':')
-  if (port === undefined) return true
-  const number = Number(port)
-  return number >= 1 && number <= 65535
-}
-
-/** Serial dạng `host:port` nghĩa là thiết bị đi qua TCP/IP, không qua cáp. */
-export const isNetworkSerial = (serial: string): boolean => /:\d{1,5}$/.test(serial)
 
 export const isUsable = (device: AdbDevice): boolean => device.state === 'device'
 
@@ -119,7 +98,6 @@ export function parseDevicesOutput(stdout: string): AdbDevice[] {
       state: readState(state),
       model: attributes.get('model') ?? null,
       product: attributes.get('product') ?? null,
-      overNetwork: isNetworkSerial(serial),
     })
   }
 

@@ -50,38 +50,8 @@ export class HttpAdbRepository implements AdbRepository {
     return body.ok ? ok(body.value.devices) : body
   }
 
-  async connect(address: string, signal?: AbortSignal): Promise<Result<AdbDevice[]>> {
-    const body = await request<{ devices: AdbDevice[] }>(
-      '/devices',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'connect', address }),
-      },
-      signal,
-    )
-    return body.ok ? ok(body.value.devices) : body
-  }
-
-  async disconnect(address: string, signal?: AbortSignal): Promise<Result<AdbDevice[]>> {
-    const body = await request<{ devices: AdbDevice[] }>(
-      '/devices',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'disconnect', address }),
-      },
-      signal,
-    )
-    return body.ok ? ok(body.value.devices) : body
-  }
-
-  async listPackages(
-    serial: string,
-    includeSystem: boolean,
-    signal?: AbortSignal,
-  ): Promise<Result<string[]>> {
-    const query = new URLSearchParams({ serial, ...(includeSystem ? { system: '1' } : {}) })
+  async listPackages(serial: string, signal?: AbortSignal): Promise<Result<string[]>> {
+    const query = new URLSearchParams({ serial })
     const body = await request<{ packages: string[] }>(
       `/packages?${query.toString()}`,
       { method: 'GET' },
