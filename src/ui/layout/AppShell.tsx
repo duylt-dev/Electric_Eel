@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
 import { ColorSchemeToggle } from './ColorSchemeToggle'
 import { ToolNav } from './ToolNav'
 import { UserMenu } from './UserMenu'
-import { visibleTools } from './toolRegistry'
+import { toolGroups } from './toolRegistry'
 import { BRAND_NAME, BRAND_TAGLINE } from '../brand'
 import { BrandMark } from '../components/BrandMark'
 import { m3, m3Mono } from '../theme/m3Tokens'
@@ -38,7 +38,7 @@ export interface AppShellProps {
  */
 export function AppShell({ user, onSignOut, children }: AppShellProps) {
   const pathname = usePathname()
-  const tools = visibleTools(user.isAdmin)
+  const groups = toolGroups(user.isAdmin)
 
   const brand = (
     <Stack direction="row" sx={{ alignItems: 'center', gap: 2.5, minWidth: 0 }}>
@@ -78,10 +78,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
         </Box>
 
         <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ ...m3Mono.columnHeader, color: m3('onSurfaceVariant'), px: 3, mb: 2 }}>
-            Công cụ
-          </Typography>
-          <ToolNav tools={tools} pathname={pathname} direction="column" />
+          <ToolNav groups={groups} pathname={pathname} direction="column" />
         </Box>
       </Box>
 
@@ -121,7 +118,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
               borderTop: `1px solid ${m3('outlineVariant')}`,
             }}
           >
-            <ToolNav tools={tools} pathname={pathname} direction="row" />
+            <ToolNav groups={groups} pathname={pathname} direction="row" />
           </Box>
         </Box>
 
