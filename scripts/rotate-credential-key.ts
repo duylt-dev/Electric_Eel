@@ -1,5 +1,5 @@
 /**
- * Xoay khoá mã hoá service account.
+ * Xoay khoá mã hoá cho MỌI bản mã trong cơ sở dữ liệu.
  *
  * Cách dùng:
  *
@@ -16,6 +16,15 @@
  * Script này gọi ĐÚNG hàm mã hoá mà ứng dụng dùng. Viết lại phép mã hoá ở đây
  * cho gọn là cách chắc chắn nhất để hai bên lệch nhau, và lần lệch đầu tiên sẽ
  * biến toàn bộ credential thành rác không đọc lại được.
+ *
+ * Hiện có HAI bảng giữ bản mã, và cả hai đều phải được chạm:
+ *
+ *   · `FirebaseApp.credentialCiphertext`   — service account của Firebase.
+ *   · `UserLlmCredential.apiKeyCiphertext` — khoá OpenAI/Gemini của từng người.
+ *
+ * Thêm một bảng có bản mã mà quên thêm vào đây thì lần xoay khoá kế tiếp biến
+ * bảng đó thành rác, và điều đó chỉ lộ ra vào lần dùng tiếp theo — có khi là
+ * vài tuần sau.
  */
 import { prisma } from '../src/data/db/prismaClient'
 import {
@@ -33,20 +42,19 @@ async function main(): Promise<void> {
 
   console.log(`Khoá hiện hành: ${keyId.value}`)
 
+  const failures: string[] = []
   const apps = await prisma.firebaseApp.findMany({
     where: { credentialCiphertext: { not: null } },
     select: { id: true, slug: true, displayName: true, credentialCiphertext: true },
     orderBy: { slug: 'asc' },
   })
 
-  if (apps.length === 0) {
-    console.log('Không có app nào đang giữ service account. Không cần làm gì.')
-    return
-  }
-
   let rotated = 0
   let skipped = 0
-  const failures: string[] = []
+
+  if (apps.length === 0) {
+    console.log('Không có app nào đang giữ service account.')
+  }
 
   for (const app of apps) {
     const ciphertext = app.credentialCiphertext
@@ -83,13 +91,57 @@ async function main(): Promise<void> {
     rotated += 1
   }
 
+  // ── Khoá LLM của từng người dùng ──
+  const credentials = await prisma.userLlmCredential.findMany({
+    select: { id: true, provider: true, apiKeyCiphertext: true, user: { select: { email: true } } },
+    orderBy: [{ userId: 'asc' }, { provider: 'asc' }],
+  })
+
+  if (credentials.length === 0) {
+    console.log('Không có khoá API mô hình nào đang lưu.')
+  }
+
+  for (const credential of credentials) {
+    // Nhãn dùng email chứ không dùng id: khi một hàng hỏng, người chạy script
+    // cần biết phải báo cho ai gắn lại khoá, và id không nói với họ điều gì.
+    const label = `${credential.user?.email ?? credential.id} · ${credential.provider}`
+
+    if (isEncryptedWithActiveKey(credential.apiKeyCiphertext)) {
+      console.log(`  = ${label} — đã dùng khoá hiện hành`)
+      skipped += 1
+      continue
+    }
+
+    const plaintext = decryptCredential(credential.apiKeyCiphertext)
+    if (!plaintext.ok) {
+      console.error(`  ✗ ${label} — ${plaintext.error.message}`)
+      failures.push(label)
+      continue
+    }
+
+    const reencrypted = encryptCredential(plaintext.value)
+    if (!reencrypted.ok) {
+      console.error(`  ✗ ${label} — ${reencrypted.error.message}`)
+      failures.push(label)
+      continue
+    }
+
+    await prisma.userLlmCredential.update({
+      where: { id: credential.id },
+      data: { apiKeyCiphertext: reencrypted.value },
+    })
+    console.log(`  ✓ ${label} — đã mã hoá lại`)
+    rotated += 1
+  }
+
   console.log(`\nXong: ${rotated} đã xoay, ${skipped} bỏ qua, ${failures.length} hỏng.`)
 
   if (failures.length > 0) {
     throw new Error(
       `Không xoay được: ${failures.join(', ')}.\n` +
         'Nhiều khả năng khoá cũ của chúng không nằm trong CREDENTIAL_ENCRYPTION_KEY_PREVIOUS. ' +
-        'Đặt đúng khoá cũ rồi chạy lại — script bỏ qua những app đã xong nên chạy lại là an toàn.',
+        'Đặt đúng khoá cũ rồi chạy lại — script bỏ qua những hàng đã xong nên chạy lại là an toàn.\n' +
+        'Riêng khoá API mô hình thì gắn lại ở trang /translations cũng xong.',
     )
   }
 
