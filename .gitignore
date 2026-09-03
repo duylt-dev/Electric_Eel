@@ -22,7 +22,6 @@ src/generated/
 
 # credential Firebase tải về máy
 *service-account*.json
-!docs/*-template.json
 
 # macos
 .DS_Store
@@ -46,7 +45,6 @@ test-results/
 .vercel/
 
 # cấu hình máy cá nhân, không chia sẻ
-.claude/settings.local.json
 .claude
 .idea/
 .vscode/
