@@ -25,6 +25,12 @@ const createClient = (): PrismaClient =>
 /**
  * Next.js ở chế độ dev nạp lại module mỗi lần sửa file. Không giữ lại client
  * thì mỗi lần lưu file sinh thêm một pool kết nối, tới lúc DB hết chỗ.
+ *
+ * Cái giá của việc giữ lại: `globalThis` sống lâu hơn mọi lần nạp lại module,
+ * nên sau khi `prisma generate` sinh thêm model thì tiến trình dev vẫn đang cầm
+ * thể hiện CŨ — thể hiện không biết model mới. Triệu chứng đúng là bảng cũ chạy
+ * bình thường còn bảng vừa thêm thì hỏng, và không lần sửa file nào chữa được.
+ * Cách chữa duy nhất là khởi động lại `pnpm dev`.
  */
 const globalForPrisma = globalThis as unknown as { prismaClient?: PrismaClient }
 
