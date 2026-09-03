@@ -15,25 +15,18 @@ import { useCallback, useState } from 'react'
 import type { ReactNode } from 'react'
 
 import { findLanguage } from '@/domain/translation/entities/LanguageCode'
+import { MAX_APP_DESCRIPTION_LENGTH } from '@/domain/translation/entities/TranslationSettings'
 import { MetaChip } from '@/ui/components/MetaChip'
 import { PageHeader } from '@/ui/components/PageHeader'
 import { m3, m3Mono, m3Shape } from '@/ui/theme/m3Tokens'
 import { StringTranslatorViewModel } from './StringTranslatorViewModel'
-import { canTranslate, formatBytes, progressRatio } from './StringTranslatorContract'
+import { canTranslate, formatBytes, isConfigured, progressRatio, providerLabel } from './StringTranslatorContract'
 import type { StringTranslatorEffect } from './StringTranslatorContract'
 import { FileDropZone } from './components/FileDropZone'
 import { LanguagePicker } from './components/LanguagePicker'
+import { ModelSettingsPanel } from './components/ModelSettingsPanel'
 import { TranslationProgress } from './components/TranslationProgress'
 import { ValidationReport } from './components/ValidationReport'
-
-export interface StringTranslatorScreenProps {
-  /** Nhà cung cấp và model đang cấu hình, ví dụ `openai · gpt-4o-mini`. */
-  providerLabel: string
-  /** Đã có khoá API chưa. Chưa có thì mọi nút dịch đều vô nghĩa. */
-  configured: boolean
-  /** Vì sao chưa cấu hình được — chỉ có khi `configured` là false. */
-  configurationHint?: string
-}
 
 /**
  * Màn Dịch.
@@ -41,15 +34,15 @@ export interface StringTranslatorScreenProps {
  * Không chứa logic nghiệp vụ: đọc state qua hook, bắn intent, xử lý Effect.
  * Nhìn file này chỉ trả lời được câu "trông nó thế nào" — đúng như mong đợi.
  *
- * Ba bước đánh số, và chúng cố tình hiện hết cùng lúc chứ không phải một trình
+ * Bốn bước đánh số, và chúng cố tình hiện hết cùng lúc chứ không phải một trình
  * hướng dẫn từng trang: người dùng thường đổi danh sách ngôn ngữ rồi chạy lại
  * trên cùng một tệp, mà một trình hướng dẫn bắt họ đi lại từ đầu mỗi lần.
+ *
+ * Bước gắn khoá đứng ĐẦU vì không có khoá thì ba bước sau đều vô nghĩa; nó tự
+ * thu lại thành một dòng khi khoá đã gắn xong, để lần vào sau nó không chắn
+ * đường tới việc chính.
  */
-export function StringTranslatorScreen({
-  providerLabel,
-  configured,
-  configurationHint,
-}: StringTranslatorScreenProps) {
+export function StringTranslatorScreen() {
   const state = StringTranslatorViewModel.useState()
   const onIntent = StringTranslatorViewModel.useIntent()
 
@@ -87,7 +80,8 @@ export function StringTranslatorScreen({
   )
 
   const translating = state.status === 'translating'
-  const ready = canTranslate(state) && configured
+  const ready = canTranslate(state)
+  const configured = isConfigured(state)
 
   return (
     <>
@@ -97,7 +91,7 @@ export function StringTranslatorScreen({
         subtitle="Nạp một tệp strings.xml, chọn ngôn ngữ, nhận về một tệp .zip đã xếp sẵn theo đúng cấu trúc thư mục values-xx của Android."
         meta={
           <>
-            <MetaChip label="mô hình">{providerLabel}</MetaChip>
+            <MetaChip label="mô hình">{providerLabel(state.settings)}</MetaChip>
             <MetaChip label="ngôn ngữ đã chọn">{state.selected.length}</MetaChip>
             {state.report === null ? null : (
               <MetaChip label="chuỗi">{state.report.translatableCount}</MetaChip>
@@ -107,15 +101,23 @@ export function StringTranslatorScreen({
       />
 
       <Stack spacing={7} sx={{ maxWidth: 960 }}>
-        {configured ? null : (
-          <Alert severity="warning">
-            {configurationHint ??
-              'Chưa cấu hình khoá API cho mô hình dịch, nên nút dịch chưa dùng được.'}{' '}
-            Xem <code>.env.example</code> để biết cần đặt biến nào.
-          </Alert>
-        )}
+        <Step
+          index={1}
+          title="Mô hình dịch"
+          hint="Chọn nhà cung cấp, dán khoá API của bạn, chọn model."
+        >
+          <ModelSettingsPanel
+            settings={state.settings}
+            disabled={translating}
+            onProviderChange={(provider) => onIntent({ type: 'ProviderChanged', provider })}
+            onModelChange={(model) => onIntent({ type: 'ModelChanged', model })}
+            onModelListOpen={() => onIntent({ type: 'ModelListRequested' })}
+            onKeyDraftChange={(value) => onIntent({ type: 'ApiKeyDraftChanged', value })}
+            onKeySubmit={() => onIntent({ type: 'ApiKeySubmitted' })}
+          />
+        </Step>
 
-        <Step index={1} title="Nạp tệp strings.xml" hint="Tệp được soi ngay tại trình duyệt, chưa gửi đi đâu cả.">
+        <Step index={2} title="Nạp tệp strings.xml" hint="Tệp được soi ngay tại trình duyệt, chưa gửi đi đâu cả.">
           <Stack spacing={4}>
             <FileDropZone
               fileName={state.fileName}
@@ -129,9 +131,9 @@ export function StringTranslatorScreen({
         </Step>
 
         <Step
-          index={2}
+          index={3}
           title="Ngữ cảnh và ngôn ngữ"
-          hint="Tên app đi vào prompt làm ngữ cảnh — cùng một từ tiếng Anh dịch khác nhau tuỳ app."
+          hint="Tên và mô tả app đi vào prompt làm ngữ cảnh — cùng một từ tiếng Anh dịch khác nhau tuỳ app."
         >
           <Stack spacing={5}>
             <TextField
@@ -140,9 +142,30 @@ export function StringTranslatorScreen({
               value={state.appName}
               disabled={translating}
               onChange={(event) => onIntent({ type: 'AppNameChanged', value: event.target.value })}
+              onBlur={() => onIntent({ type: 'AppContextCommitted' })}
               helperText='Bỏ trống cũng dịch được, nhưng mô hình sẽ đoán ngữ cảnh. "Rate" trong app đo nhịp tim và trong app cho vay là hai từ khác nhau.'
               size="small"
               sx={{ maxWidth: 460 }}
+            />
+
+            <TextField
+              label="Mô tả ứng dụng"
+              placeholder="Ví dụ: App theo dõi đường huyết cho người tiểu đường. Người dùng nhập chỉ số sau mỗi bữa ăn và xem biểu đồ theo tuần. Giọng văn thân thiện, không dùng thuật ngữ y khoa nặng."
+              value={state.appDescription}
+              disabled={translating}
+              multiline
+              minRows={3}
+              maxRows={8}
+              onChange={(event) =>
+                onIntent({
+                  type: 'AppDescriptionChanged',
+                  value: event.target.value.slice(0, MAX_APP_DESCRIPTION_LENGTH),
+                })
+              }
+              onBlur={() => onIntent({ type: 'AppContextCommitted' })}
+              helperText={`App làm gì, cho ai, giọng văn thế nào — càng cụ thể thì mô hình càng ít đoán sai nghĩa. ${state.appDescription.length}/${MAX_APP_DESCRIPTION_LENGTH} ký tự.`}
+              size="small"
+              sx={{ maxWidth: 680 }}
             />
             <LanguagePicker
               selected={state.selected}
@@ -153,7 +176,7 @@ export function StringTranslatorScreen({
           </Stack>
         </Step>
 
-        <Step index={3} title="Dịch và tải về" hint="Mỗi ngôn ngữ chạy độc lập; một ngôn ngữ hỏng không kéo theo phần còn lại.">
+        <Step index={4} title="Dịch và tải về" hint="Mỗi ngôn ngữ chạy độc lập; một ngôn ngữ hỏng không kéo theo phần còn lại.">
           <Stack spacing={5}>
             <Stack direction="row" sx={{ gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
               <Button
@@ -188,9 +211,15 @@ export function StringTranslatorScreen({
               )}
             </Stack>
 
+            {configured ? null : (
+              <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
+                Gắn khoá API ở bước 1 trước đã.
+              </Typography>
+            )}
+
             {state.xml === null ? (
               <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
-                Chọn tệp ở bước 1 trước đã.
+                Chọn tệp ở bước 2 trước đã.
               </Typography>
             ) : null}
 

@@ -36,6 +36,8 @@ export interface TranslateStringsDeps {
 export interface TranslateStringsInput {
   readonly xml: string
   readonly appName: string
+  /** Mô tả app cho prompt. Chuỗi rỗng là hợp lệ — prompt sẽ bỏ phần đó đi. */
+  readonly appDescription: string
   readonly languages: readonly LanguageOption[]
   readonly chunkTokenLimit?: number
   /** Số ngôn ngữ chạy song song. */
@@ -79,18 +81,17 @@ async function translateChunk(
   deps: TranslateStringsDeps,
   chunk: string,
   language: LanguageOption,
-  appName: string,
-  preferNumericEntities: boolean,
+  input: TranslateStringsInput,
   signal: AbortSignal | undefined,
 ): Promise<ChunkResult> {
-  const { masked, masking } = protectSpecials(chunk, preferNumericEntities)
+  const { masked, masking } = protectSpecials(chunk, input.preferNumericEntities ?? false)
   let lastReason = 'Không rõ nguyên nhân.'
 
   for (let attempt = 1; attempt <= ATTEMPTS_PER_CHUNK; attempt += 1) {
     if (signal?.aborted === true) return { xml: null, reason: 'Đã huỷ.' }
 
     const translated = await deps.translator.translateChunk(
-      { xml: masked, language, appName },
+      { xml: masked, language, appName: input.appName, appDescription: input.appDescription },
       signal,
     )
 
@@ -120,15 +121,7 @@ async function translateOneLanguage(
   const results = await mapWithLimit(
     chunks,
     input.chunkConcurrency ?? DEFAULT_CHUNK_CONCURRENCY,
-    (chunk) =>
-      translateChunk(
-        deps,
-        chunk,
-        language,
-        input.appName,
-        input.preferNumericEntities ?? false,
-        signal,
-      ),
+    (chunk) => translateChunk(deps, chunk, language, input, signal),
   )
 
   const translated = results.filter((result): result is { xml: string } => result.xml !== null)

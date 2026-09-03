@@ -6,6 +6,11 @@ export interface TranslateChunkRequest {
   readonly xml: string
   readonly language: LanguageOption
   readonly appName: string
+  /**
+   * Mô tả app — app làm gì, cho ai. Chuỗi rỗng nghĩa là người dùng không viết,
+   * và prompt bỏ hẳn phần đó đi thay vì gửi một dòng trống.
+   */
+  readonly appDescription: string
 }
 
 /**

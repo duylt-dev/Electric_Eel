@@ -1,6 +1,7 @@
 import { HttpAdbRepository } from '@/data/adb/HttpAdbRepository'
 import { HttpRemoteConfigRepository } from '@/data/remote-config/HttpRemoteConfigRepository'
 import { HttpTranslationRepository } from '@/data/translation/HttpTranslationRepository'
+import { HttpTranslationSettingsRepository } from '@/data/translation/HttpTranslationSettingsRepository'
 
 /**
  * Composition root phía trình duyệt.
@@ -13,6 +14,11 @@ export const clientContainer = {
   remoteConfig: new HttpRemoteConfigRepository(),
   /** Cổng dịch chuỗi — gọi Route Handler, không bao giờ chạm tới khoá API. */
   translation: new HttpTranslationRepository(),
+  /**
+   * Cổng cấu hình mô hình. Khoá người dùng dán vào đi LÊN qua đây và không bao
+   * giờ đi xuống lại — phản hồi chỉ mang bốn ký tự cuối.
+   */
+  translationSettings: new HttpTranslationSettingsRepository(),
   /** Cổng adb — gọi Route Handler; `adb` thật chạy ở máy chủ. */
   adb: new HttpAdbRepository(),
 } as const

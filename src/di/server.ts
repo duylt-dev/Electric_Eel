@@ -5,10 +5,13 @@ import { readAdbSettings } from '@/data/adb/adbSettings'
 import { PrismaAppDirectory } from '@/data/db/PrismaAppDirectory'
 import { PrismaAuditLog } from '@/data/db/PrismaAuditLog'
 import { PrismaRateLimit } from '@/data/db/PrismaRateLimit'
+import { PrismaTranslationSettings } from '@/data/db/PrismaTranslationSettings'
 import { PrismaUserRepository } from '@/data/db/PrismaUserRepository'
 import { FirebaseRemoteConfigRepository } from '@/data/remote-config/FirebaseRemoteConfigRepository'
+import { HttpLlmModelCatalog } from '@/data/translation/HttpLlmModelCatalog'
 import { LlmStringTranslator } from '@/data/translation/LlmStringTranslator'
-import { readRuntimeOptions, readTranslationConfig } from '@/data/translation/translationProvider'
+import { buildProviderConfig, readRuntimeOptions } from '@/data/translation/translationProvider'
+import type { LlmProviderName } from '@/domain/translation/entities/LlmProvider'
 
 /**
  * Composition root phía server: nơi DUY NHẤT được phép nối cổng ở domain với
@@ -34,14 +37,22 @@ export const serverContainer = {
   /** Adapter Firebase lấy credential qua chính danh bạ app. */
   remoteConfig: new FirebaseRemoteConfigRepository(appDirectory),
   /**
-   * Công cụ dịch chuỗi. `config` và `options` là HÀM chứ không phải giá trị:
-   * chúng đọc `process.env` tại thời điểm gọi, nên đổi `.env` rồi khởi động lại
-   * là đủ — không có một bản chụp cấu hình cũ nằm lại trong module suốt vòng
-   * đời tiến trình.
+   * Công cụ dịch chuỗi.
+   *
+   * `translator` là HÀM DỰNG chứ không phải một thể hiện dùng chung, và đó là
+   * hệ quả trực tiếp của việc mỗi người mang khoá riêng: khoá chỉ biết được
+   * sau khi đã biết ai gửi yêu cầu. Một `translator` dựng sẵn ở đây sẽ giữ
+   * khoá của người đầu tiên và dịch bài của mọi người bằng hạn mức của họ.
+   *
+   * `options` cũng là hàm vì nó đọc `process.env` tại thời điểm gọi — đổi
+   * `.env` rồi khởi động lại là đủ, không có bản chụp cũ nằm lại trong module.
    */
   translation: {
-    translator: new LlmStringTranslator(),
-    config: () => readTranslationConfig(),
+    settings: new PrismaTranslationSettings(),
+    /** Liệt kê model của một khoá. Cũng là phép xác thực khoá đó. */
+    models: new HttpLlmModelCatalog(),
+    translatorFor: (provider: LlmProviderName, apiKey: string, model: string) =>
+      new LlmStringTranslator(buildProviderConfig(provider, apiKey, model)),
     options: () => readRuntimeOptions(),
   },
   /**

@@ -5,6 +5,7 @@ import { findLanguage } from '@/domain/translation/entities/LanguageCode'
 import type { LanguageOption } from '@/domain/translation/entities/LanguageCode'
 import type { TranslationEvent, TranslationRequest } from '@/domain/translation/entities/TranslationJob'
 import { translateStringsFile } from '@/domain/translation/usecases/translateStringsFile'
+import { MAX_APP_DESCRIPTION_LENGTH, MAX_APP_NAME_LENGTH } from '@/domain/translation/entities/TranslationSettings'
 import { MAX_SOURCE_BYTES, validateStringsXml } from '@/domain/translation/validation/validateStringsXml'
 import { jsonError, readJsonBody } from '@/lib/api/response'
 import { requestInfo } from '@/lib/requestInfo'
@@ -30,8 +31,6 @@ export const dynamic = 'force-dynamic'
 
 /** Trần số ngôn ngữ mỗi lượt. Đủ cho cả danh sách, chặn được yêu cầu viết tay. */
 const MAX_LANGUAGES = 60
-
-const MAX_APP_NAME_LENGTH = 80
 
 const slugify = (value: string): string =>
   value
@@ -76,6 +75,14 @@ export async function POST(request: Request) {
       ? body.appName.trim().slice(0, MAX_APP_NAME_LENGTH)
       : 'Android'
 
+  // Lấy mô tả từ thân yêu cầu chứ không đọc lại từ DB: thứ đi vào prompt phải
+  // đúng thứ người dùng đang nhìn thấy trên màn hình lúc bấm nút. Bản trong DB
+  // chỉ để lần sau khỏi gõ lại, và nó được ghi ở một đường khác.
+  const appDescription =
+    typeof body.appDescription === 'string'
+      ? body.appDescription.trim().slice(0, MAX_APP_DESCRIPTION_LENGTH)
+      : ''
+
   const requested = Array.isArray(body.languages) ? body.languages : []
   if (requested.length === 0) {
     return jsonError(AppErrors.validation('Chưa chọn ngôn ngữ nào để dịch.'))
@@ -109,9 +116,30 @@ export async function POST(request: Request) {
     )
   }
 
-  // Thiếu khoá API thì nói ngay, đừng để người dùng chờ hết 28 ngôn ngữ mới biết.
-  const config = serverContainer.translation.config()
-  if (!config.ok) return jsonError(config.error)
+  // Khoá là của chính người đang bấm nút, không phải một khoá dùng chung trong
+  // `.env`. Đọc ngay ở đây và thiếu thì nói ngay — đừng để họ chờ hết 28 ngôn
+  // ngữ mới biết là chưa gắn khoá.
+  const settings = await serverContainer.translation.settings.read(user.value.id)
+  if (!settings.ok) return jsonError(settings.error)
+
+  const credential = await serverContainer.translation.settings.resolve(
+    user.value.id,
+    settings.value.provider,
+  )
+  if (!credential.ok) return jsonError(credential.error)
+  if (credential.value === null) {
+    return jsonError(
+      AppErrors.validation(
+        'Chưa gắn khoá API cho mô hình dịch. Dán khoá của bạn ở bước "Mô hình dịch" rồi thử lại.',
+      ),
+    )
+  }
+
+  const translator = serverContainer.translation.translatorFor(
+    credential.value.provider,
+    credential.value.apiKey,
+    credential.value.model,
+  )
 
   const options = serverContainer.translation.options()
 
@@ -138,10 +166,11 @@ export async function POST(request: Request) {
       send({ type: 'started', languages: languages.map((l) => l.code), chunks: report.chunkCount })
 
       const translated = await translateStringsFile(
-        { translator: serverContainer.translation.translator },
+        { translator },
         {
           xml,
           appName,
+          appDescription,
           languages,
           chunkTokenLimit: options.chunkTokenLimit,
           languageConcurrency: options.languageConcurrency,
@@ -193,7 +222,7 @@ export async function POST(request: Request) {
       const failedCount = translated.value.failed.length
       await record(
         failedCount === 0,
-        `${languages.length} ngôn ngữ, ${translated.value.chunkCount} mẻ, ${seconds}s` +
+        `${translator.label}, ${languages.length} ngôn ngữ, ${translated.value.chunkCount} mẻ, ${seconds}s` +
           (failedCount === 0 ? '' : `, hỏng ${failedCount}: ${translated.value.failed.map((f) => f.code).join(', ')}`),
       )
 

@@ -132,47 +132,5 @@ export function inspectServerEnv(env: NodeJS.ProcessEnv = process.env): EnvProbl
     }
   }
 
-  problems.push(...inspectTranslationEnv(env))
-
   return problems
-}
-
-/**
- * Cấu hình của công cụ dịch chuỗi.
- *
- * Khác với ba biến bí mật ở trên, chúng KHÔNG bao giờ là `fatal`: công cụ dịch
- * là một tool trong nhiều tool, và thiếu khoá API của nó không phải lý do để cả
- * trang không phục vụ request nào.
- *
- * Và chỉ soi khi `TRANSLATION_PROVIDER` được đặt hẳn ra. Một máy chưa dùng tới
- * công cụ này thì không đặt biến nào cả, và im lặng mới là câu trả lời đúng —
- * còn máy đã đặt provider mà thiếu khoá thì đó là một cấu hình dở dang, tức là
- * một người đang cài đặt và cần được nói cho biết còn thiếu gì.
- */
-function inspectTranslationEnv(env: NodeJS.ProcessEnv): EnvProblem[] {
-  const raw = env.TRANSLATION_PROVIDER?.trim().toLowerCase()
-  if (raw === undefined || raw.length === 0) return []
-
-  if (raw !== 'openai' && raw !== 'gemini') {
-    return [
-      {
-        variable: 'TRANSLATION_PROVIDER',
-        message: `"${raw}" không phải nhà cung cấp nào đang hỗ trợ. Đặt là "openai" hoặc "gemini".`,
-        severity: 'warning',
-      },
-    ]
-  }
-
-  const variable = raw === 'openai' ? 'OPENAI_API_KEY' : 'GEMINI_API_KEY'
-  if (isBlank(env[variable])) {
-    return [
-      {
-        variable,
-        message: `TRANSLATION_PROVIDER đang là "${raw}" nhưng chưa có khoá. Công cụ dịch chuỗi sẽ báo chưa cấu hình.`,
-        severity: 'warning',
-      },
-    ]
-  }
-
-  return []
 }

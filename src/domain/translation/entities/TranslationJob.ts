@@ -17,6 +17,12 @@ export interface TranslationRequest {
    * và trong một app cho vay là hai từ khác nhau ở gần như mọi ngôn ngữ.
    */
   readonly appName: string
+  /**
+   * Mô tả app, đi kèm tên app vào prompt. Tên app một mình thường không đủ:
+   * "Lumi" không nói lên đây là app đọc sách hay app đèn pin, mà hai thứ đó
+   * dịch khác nhau ở gần như mọi chuỗi.
+   */
+  readonly appDescription: string
   readonly languages: readonly string[]
 }
 

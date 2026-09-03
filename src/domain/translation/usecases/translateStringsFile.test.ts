@@ -45,6 +45,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'BloodSugar',
+      appDescription: '',
       languages: [language('vi'), language('in'), language('fil')],
     })
 
@@ -62,6 +63,7 @@ describe('translateStringsFile', () => {
     await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [language('vi')],
     })
 
@@ -78,6 +80,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [language('vi')],
     })
 
@@ -93,6 +96,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [language('vi')],
     })
 
@@ -109,6 +113,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [language('vi'), language('ja'), language('ko')],
     })
 
@@ -124,6 +129,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [language('vi')],
     })
 
@@ -137,7 +143,7 @@ describe('translateStringsFile', () => {
 
     await translateStringsFile(
       { translator },
-      { xml: SOURCE, appName: 'x', languages: [language('vi'), language('ja')] },
+      { xml: SOURCE, appName: 'x', appDescription: '', languages: [language('vi'), language('ja')] },
       (code, failure) => seen.push({ code, ok: failure === null }),
     )
 
@@ -151,6 +157,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: '<resources><string name="a" translatable="false">A</string></resources>',
       appName: 'x',
+      appDescription: '',
       languages: [language('vi'), language('ja')],
     })
 
@@ -169,7 +176,7 @@ describe('translateStringsFile', () => {
 
     const result = await translateStringsFile(
       { translator },
-      { xml: SOURCE, appName: 'x', languages: [language('vi')] },
+      { xml: SOURCE, appName: 'x', appDescription: '', languages: [language('vi')] },
       undefined,
       controller.signal,
     )
@@ -185,6 +192,7 @@ describe('translateStringsFile', () => {
     const result = await translateStringsFile({ translator }, {
       xml: SOURCE,
       appName: 'x',
+      appDescription: '',
       languages: [...SUPPORTED_LANGUAGES],
     })
 

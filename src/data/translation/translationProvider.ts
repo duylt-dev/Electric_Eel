@@ -1,21 +1,36 @@
-import { AppErrors, type Result, err, ok } from '../../core/result'
+import { LLM_PROVIDER_INFO } from '../../domain/translation/entities/LlmProvider'
+import type { LlmProviderName } from '../../domain/translation/entities/LlmProvider'
 
 /**
- * Cấu hình nhà cung cấp mô hình cho công cụ dịch chuỗi.
+ * Phần cấu hình của công cụ dịch còn nằm ở BIẾN MÔI TRƯỜNG.
  *
- * Tên biến giữ đúng như tool Python đang dùng (`TRANSLATION_PROVIDER`,
- * `OPENAI_MODEL`, `GEMINI_MODEL`…) để một người đã có sẵn `.env` của tool cũ
- * chép thẳng sang được, không phải dịch tên biến trong đầu.
+ * ── Cái gì đã rời khỏi đây, và vì sao ──
+ *
+ * Khoá API và model từng đọc ở file này (`OPENAI_API_KEY`, `OPENAI_MODEL`,
+ * `TRANSLATION_PROVIDER`…). Chúng chuyển vào cơ sở dữ liệu, theo từng người
+ * dùng, vì hạn mức và hoá đơn của nhà cung cấp tính theo khoá: một khoá dùng
+ * chung nghĩa là một người dịch cả trăm ngôn ngữ thì cả nhóm cùng nhận 429, và
+ * không ai truy được phần chi phí nào là của ai.
+ *
+ * ── Cái gì Ở LẠI, và vì sao ──
+ *
+ * Những số vặn cho vừa máy chủ, không phải lựa chọn của người dùng: nhiệt độ,
+ * trần token, hạn giờ, mức chạy song song. Chúng giống nhau cho mọi người dùng
+ * trên cùng một cài đặt, nên chỗ đúng của chúng vẫn là `.env`.
  */
-export type TranslationProviderName = 'openai' | 'gemini'
 
-export interface TranslationProviderConfig {
-  readonly provider: TranslationProviderName
-  readonly model: string
-  readonly apiKey: string
+/** Số vặn cho một nhà cung cấp. Khoá và model KHÔNG nằm ở đây. */
+export interface ProviderTuning {
   readonly temperature: number
   readonly maxOutputTokens: number
   readonly timeoutMs: number
+}
+
+/** Cấu hình đủ để chạy một lượt gọi: số vặn từ `.env` + khoá/model của người dùng. */
+export interface TranslationProviderConfig extends ProviderTuning {
+  readonly provider: LlmProviderName
+  readonly model: string
+  readonly apiKey: string
 }
 
 const numberFrom = (raw: string | undefined, fallback: number): number => {
@@ -31,9 +46,6 @@ export const truthy = (raw: string | undefined, fallback: boolean): boolean => {
 }
 
 export const DEFAULTS = {
-  provider: 'openai' as TranslationProviderName,
-  openaiModel: 'gpt-4o-mini',
-  geminiModel: 'gemini-2.5-flash',
   openaiTemperature: 0.3,
   geminiTemperature: 0.1,
   openaiMaxTokens: 16000,
@@ -42,67 +54,47 @@ export const DEFAULTS = {
 } as const
 
 /**
- * Đọc cấu hình, hoặc nói rõ thiếu cái gì.
+ * Số vặn của một nhà cung cấp.
  *
- * Trả `Result` chứ không ném: thiếu khoá API là một tình huống bình thường
- * (máy dev vừa clone về), và câu trả lời đúng cho nó là một dòng chữ trên giao
- * diện chứ không phải một trang 500.
+ * Không trả `Result`: mọi biến ở đây đều có mặc định dùng được, nên không có
+ * tình huống "thiếu cấu hình" nào để báo. Thứ duy nhất thiếu được là khoá API,
+ * mà khoá thì không còn đọc ở đây nữa.
  */
-export function readTranslationConfig(
+export function readProviderTuning(
+  provider: LlmProviderName,
   env: NodeJS.ProcessEnv = process.env,
-): Result<TranslationProviderConfig> {
-  const raw = (env.TRANSLATION_PROVIDER ?? DEFAULTS.provider).trim().toLowerCase()
-
-  if (raw !== 'openai' && raw !== 'gemini') {
-    return err(
-      AppErrors.validation(
-        `TRANSLATION_PROVIDER = "${raw}" không phải nhà cung cấp nào đang hỗ trợ. Đặt là "openai" hoặc "gemini".`,
-      ),
-    )
-  }
-
-  if (raw === 'openai') {
-    const apiKey = env.OPENAI_API_KEY?.trim() ?? ''
-    if (apiKey.length === 0) {
-      return err(
-        AppErrors.validation(
-          'Chưa có OPENAI_API_KEY, nên chưa dịch được. Đặt biến đó trong .env rồi khởi động lại.',
-        ),
-      )
-    }
-    return ok({
-      provider: 'openai',
-      model: env.OPENAI_MODEL?.trim() ?? DEFAULTS.openaiModel,
-      apiKey,
+): ProviderTuning {
+  if (provider === 'openai') {
+    return {
       temperature: numberFrom(env.OPENAI_TEMPERATURE, DEFAULTS.openaiTemperature),
       maxOutputTokens: numberFrom(env.OPENAI_MAX_TOKENS, DEFAULTS.openaiMaxTokens),
       timeoutMs: numberFrom(env.OPENAI_TIMEOUT, DEFAULTS.timeoutSeconds) * 1000,
-    })
+    }
   }
 
-  const apiKey = env.GEMINI_API_KEY?.trim() ?? ''
-  if (apiKey.length === 0) {
-    return err(
-      AppErrors.validation(
-        'Chưa có GEMINI_API_KEY, nên chưa dịch được. Đặt biến đó trong .env rồi khởi động lại.',
-      ),
-    )
-  }
-  return ok({
-    provider: 'gemini',
-    model: env.GEMINI_MODEL?.trim() ?? DEFAULTS.geminiModel,
-    apiKey,
+  return {
     temperature: numberFrom(env.GEMINI_TEMPERATURE, DEFAULTS.geminiTemperature),
     maxOutputTokens: numberFrom(env.GEMINI_MAX_OUTPUT_TOKENS, DEFAULTS.geminiMaxTokens),
     timeoutMs: numberFrom(env.GEMINI_TIMEOUT, DEFAULTS.timeoutSeconds) * 1000,
-  })
+  }
 }
 
+/** Ghép khoá và model của người dùng với số vặn của máy chủ. */
+export const buildProviderConfig = (
+  provider: LlmProviderName,
+  apiKey: string,
+  model: string,
+  env: NodeJS.ProcessEnv = process.env,
+): TranslationProviderConfig => ({
+  provider,
+  apiKey,
+  model: model.trim().length === 0 ? LLM_PROVIDER_INFO[provider].defaultModel : model.trim(),
+  ...readProviderTuning(provider, env),
+})
+
 /** Nhãn hiện lên giao diện: người dùng cần biết bản dịch do model nào tạo ra. */
-export const describeProvider = (env: NodeJS.ProcessEnv = process.env): string => {
-  const config = readTranslationConfig(env)
-  return config.ok ? `${config.value.provider} · ${config.value.model}` : 'chưa cấu hình'
-}
+export const describeModel = (provider: LlmProviderName, model: string): string =>
+  `${LLM_PROVIDER_INFO[provider].label} · ${model}`
 
 /** Các tuỳ chọn điều phối, đọc từ cùng bộ biến với tool Python. */
 export interface TranslationRuntimeOptions {
@@ -114,10 +106,12 @@ export interface TranslationRuntimeOptions {
 }
 
 /**
- * Mặc định thấp hơn tool Python (100 ngôn ngữ song song) rất nhiều, và có lý do:
- * ở đó mỗi lần chạy là một người ngồi trước máy mình, còn ở đây nhiều người
- * dùng chung một hạn mức API. Thả 100 lượt gọi cùng lúc thì người bấm thứ hai
- * nhận về một loạt lỗi 429.
+ * Mặc định thấp hơn tool Python (100 ngôn ngữ song song) rất nhiều.
+ *
+ * Lý do cũ là "nhiều người dùng chung một hạn mức". Nay mỗi người mang khoá
+ * riêng nên vế đó không còn, nhưng trần vẫn giữ: hạn mức của MỘT khoá cá nhân
+ * ở bậc thấp nhất còn dễ chạm hơn hạn mức của cả nhóm, và 100 lượt gọi song
+ * song từ một khoá mới là cách chắc chắn nhất để chạm nó.
  */
 export const readRuntimeOptions = (
   env: NodeJS.ProcessEnv = process.env,

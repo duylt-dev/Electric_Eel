@@ -1,33 +1,44 @@
 import { AppErrors, type Result, err, ok } from '../../core/result'
 import type { StringTranslator, TranslateChunkRequest } from '../../domain/translation/repositories/StringTranslator'
-import { describeProvider, readTranslationConfig } from './translationProvider'
+import { GEMINI_BASE, OPENAI_BASE, authHeaders, describeFailure, mapProviderFailure, mapProviderThrow } from './llmHttp'
+import { describeModel } from './translationProvider'
 import type { TranslationProviderConfig } from './translationProvider'
 
 /**
  * Cổng ra mô hình ngôn ngữ, gọi thẳng REST của nhà cung cấp.
  *
- * Không dùng SDK của OpenAI hay Google: cái cần ở đây là ĐÚNG MỘT lượt gọi
- * "gửi một prompt, nhận một chuỗi". Hai SDK đó mang theo phần streaming, phần
- * gọi công cụ, phần đếm token và một cây phụ thuộc riêng — trả giá bằng dung
- * lượng và bằng việc phải nâng cấp theo chúng, đổi lại một thứ `fetch` làm
- * được trong ba mươi dòng.
+ * Cấu hình được TIÊM VÀO qua hàm dựng chứ không đọc `process.env`. Đó là thay
+ * đổi kéo theo việc mỗi người dùng mang khoá riêng: khoá và model chỉ biết
+ * được sau khi đã biết ai đang gửi yêu cầu, nên chúng không thể là thứ đọc một
+ * lần lúc dựng module. Mỗi lượt dịch dựng một adapter mới với đúng khoá của
+ * người bấm nút.
  *
- * Cũng vì thế mà đổi nhà cung cấp là thêm một nhánh trong `callProvider`, chứ
- * không phải đổi cả tầng.
+ * Đổi nhà cung cấp là thêm một nhánh trong `callProvider`, chứ không phải đổi
+ * cả tầng.
  */
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
 
 /**
  * Prompt dịch, dịch sát bản trong `chunk.py`.
  *
- * Khác đúng một chỗ: kèm cả TÊN ngôn ngữ chứ không chỉ mã. Bản Python chỉ gửi
- * mã ISO, mà `in` (Indonesia, mã cũ của Android) và `fil` (Philippines) là hai
- * mã mô hình rất dễ đoán nhầm — đoán nhầm thì cả thư mục ra sai ngôn ngữ và
- * không có gì báo.
+ * Khác hai chỗ:
+ *
+ *   · Kèm cả TÊN ngôn ngữ chứ không chỉ mã. Bản Python chỉ gửi mã ISO, mà `in`
+ *     (Indonesia, mã cũ của Android) và `fil` (Philippines) là hai mã mô hình
+ *     rất dễ đoán nhầm — đoán nhầm thì cả thư mục ra sai ngôn ngữ và không có
+ *     gì báo.
+ *   · Kèm mô tả app khi người dùng có viết. Tên app một mình thường không đủ:
+ *     "Lumi" không nói lên đây là app đọc sách hay app đèn pin, mà hai thứ đó
+ *     dịch khác nhau ở gần như mọi chuỗi. Không viết thì bỏ hẳn phần đó đi —
+ *     một dòng "App description:" trống chỉ dạy mô hình rằng trường này vô nghĩa.
  */
-const buildPrompt = (request: TranslateChunkRequest): string =>
-  `You are a professional application translator. Translate this Android strings XML snippet to ${request.language.englishName} (Android resource code: ${request.language.code}) for the "${request.appName}" app.
+const buildPrompt = (request: TranslateChunkRequest): string => {
+  const description = request.appDescription.trim()
+  const context =
+    description.length === 0
+      ? ''
+      : `\n\nAbout the "${request.appName}" app (use this to pick the right sense of ambiguous words):\n${description}`
+
+  return `You are a professional application translator. Translate this Android strings XML snippet to ${request.language.englishName} (Android resource code: ${request.language.code}) for the "${request.appName}" app.${context}
 
 Rules:
 1) Preserve ALL XML tags/attributes/structure EXACTLY.
@@ -42,6 +53,7 @@ Snippet:
 ${request.xml}
 
 Translated XML:`
+}
 
 interface OpenAiResponse {
   choices?: readonly { message?: { content?: string } }[]
@@ -51,80 +63,46 @@ interface GeminiResponse {
   candidates?: readonly { content?: { parts?: readonly { text?: string }[] } }[]
 }
 
-/** Quy lỗi HTTP của nhà cung cấp về loại lỗi trong miền. */
-const mapFailure = (status: number, provider: string, detail: string) => {
-  switch (status) {
-    case 400:
-      return AppErrors.validation(`${provider} từ chối yêu cầu: ${detail}`, { detail })
-    case 401:
-    case 403:
-      return AppErrors.upstream(
-        `${provider} từ chối khoá API. Kiểm tra lại khoá trong .env và hạn mức của tài khoản.`,
-        { detail },
-      )
-    case 404:
-      return AppErrors.notFound(`${provider} không có model này. Kiểm tra lại tên model.`, { detail })
-    case 429:
-      return AppErrors.upstream(`${provider} đang giới hạn tần suất. Thử lại sau ít phút.`, { detail })
-    default:
-      return AppErrors.upstream(`${provider} trả lỗi HTTP ${status}.`, { detail })
-  }
-}
-
-const describeFailure = async (response: Response): Promise<string> => {
-  const text = await response.text().catch(() => '')
-  return text.length === 0 ? `HTTP ${response.status}` : text.slice(0, 500)
-}
-
 export class LlmStringTranslator implements StringTranslator {
-  constructor(private readonly env: NodeJS.ProcessEnv = process.env) {}
+  constructor(private readonly config: TranslationProviderConfig) {}
 
   get label(): string {
-    return describeProvider(this.env)
+    return describeModel(this.config.provider, this.config.model)
   }
 
   async translateChunk(
     request: TranslateChunkRequest,
     signal?: AbortSignal,
   ): Promise<Result<string>> {
-    const config = readTranslationConfig(this.env)
-    if (!config.ok) return config
-
     // Hai nguồn dừng gộp làm một: người dùng bấm huỷ, và lượt gọi quá hạn. Thiếu
     // vế thứ hai thì một lượt gọi treo giữ luôn cả mẻ cho tới khi tiến trình chết.
-    const timeout = AbortSignal.timeout(config.value.timeoutMs)
-    const combined =
-      signal !== undefined ? AbortSignal.any([signal, timeout]) : timeout
+    const timeout = AbortSignal.timeout(this.config.timeoutMs)
+    const combined = signal !== undefined ? AbortSignal.any([signal, timeout]) : timeout
 
     try {
-      return await this.callProvider(config.value, request, combined)
+      return await this.callProvider(request, combined)
     } catch (thrown) {
-      if (signal?.aborted === true) return err(AppErrors.cancelled('Đã huỷ lượt dịch.'))
-      if (timeout.aborted) {
-        return err(
-          AppErrors.network(
-            `${config.value.provider} không trả lời trong ${Math.round(config.value.timeoutMs / 1000)} giây.`,
-          ),
-        )
-      }
-      return err(AppErrors.network(`Không gọi được tới ${config.value.provider}.`, { cause: thrown }))
+      return err(
+        mapProviderThrow(thrown, this.config.provider, {
+          ...(signal !== undefined ? { userSignal: signal } : {}),
+          timeout,
+          timeoutMs: this.config.timeoutMs,
+        }),
+      )
     }
   }
 
   private async callProvider(
-    config: TranslationProviderConfig,
     request: TranslateChunkRequest,
     signal: AbortSignal,
   ): Promise<Result<string>> {
+    const config = this.config
     const prompt = buildPrompt(request)
 
     if (config.provider === 'openai') {
-      const response = await fetch(OPENAI_URL, {
+      const response = await fetch(`${OPENAI_BASE}/chat/completions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${config.apiKey}`,
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders('openai', config.apiKey) },
         body: JSON.stringify({
           model: config.model,
           messages: [{ role: 'user', content: prompt }],
@@ -134,7 +112,9 @@ export class LlmStringTranslator implements StringTranslator {
         signal,
       })
 
-      if (!response.ok) return err(mapFailure(response.status, 'OpenAI', await describeFailure(response)))
+      if (!response.ok) {
+        return err(mapProviderFailure(response.status, 'openai', await describeFailure(response)))
+      }
 
       const body = (await response.json()) as OpenAiResponse
       const content = body.choices?.[0]?.message?.content
@@ -144,10 +124,10 @@ export class LlmStringTranslator implements StringTranslator {
       return ok(content)
     }
 
-    const url = `${GEMINI_URL}/${encodeURIComponent(config.model)}:generateContent`
+    const url = `${GEMINI_BASE}/models/${encodeURIComponent(config.model)}:generateContent`
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': config.apiKey },
+      headers: { 'Content-Type': 'application/json', ...authHeaders('gemini', config.apiKey) },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
@@ -161,7 +141,9 @@ export class LlmStringTranslator implements StringTranslator {
       signal,
     })
 
-    if (!response.ok) return err(mapFailure(response.status, 'Gemini', await describeFailure(response)))
+    if (!response.ok) {
+      return err(mapProviderFailure(response.status, 'gemini', await describeFailure(response)))
+    }
 
     const body = (await response.json()) as GeminiResponse
     // Gemini trả nội dung thành nhiều mảnh; nối lại chứ đừng lấy mảnh đầu.
