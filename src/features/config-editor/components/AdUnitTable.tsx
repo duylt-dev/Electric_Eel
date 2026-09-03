@@ -23,6 +23,7 @@ import { AD_TYPES, AD_TYPE_LABEL } from '@/domain/ads/entities/AdType'
 import { AD_UNIT_ID_PATTERN, DEMO_AD_UNIT_ID } from '@/domain/ads/entities/AdmobIdDocument'
 import type { AdUnit, AdmobIdDocument } from '@/domain/ads/entities/AdmobIdDocument'
 import type { Finding } from '@/domain/ads/validation/Finding'
+import { Pagination, usePagination } from '@/ui/components/Pagination'
 import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
 import { FindingList } from './FindingList'
 
@@ -42,6 +43,15 @@ export interface AdUnitTableProps {
  * Bảng chứ không phải biểu mẫu từng cái một: 72 ad unit, và việc thường làm
  * nhất là dò xem mã nào sai hoặc thiếu. Dạng bảng cho phép quét dọc theo cột
  * mã — đúng cách mắt người tìm ra chỗ lệch.
+ *
+ * Cắt trang 25 dòng một như mọi danh sách khác. Bảy mươi lăm dòng liền một mạch
+ * thì cột mã dài hơn màn hình gấp mấy lần, và cái đầu bảng — nơi ghi mỗi cột là
+ * gì — trôi mất từ dòng thứ hai mươi.
+ *
+ * Ô thêm ad unit đứng cùng hàng với ô tìm kiếm, sát mép phải: hai việc này đều
+ * là thao tác trên cả bảng chứ không trên một dòng nào, nên chúng thuộc về cùng
+ * một hàng công cụ ở trên đầu. Để nó dưới chân bảng thì mỗi lần thêm một ad unit
+ * lại phải cuộn qua cả trang.
  */
 export function AdUnitTable({
   document,
@@ -76,6 +86,9 @@ export function AdUnitTable({
     )
   }, [document.listAds, search])
 
+  // Gõ vào ô tìm kiếm là lọc ra một bảng khác, nên quay về trang 1.
+  const paged = usePagination(rows, { resetKey: search })
+
   const rootFindings = findings.filter((finding) => finding.path.scope === 'admobRoot')
 
   const addUnit = () => {
@@ -83,6 +96,11 @@ export function AdUnitTable({
     if (spaceName.length === 0) return
     onAdd({ spaceName, adsType: draftType, id: '' })
     setDraftName('')
+    // Ad unit mới nối vào cuối danh sách, tức là ở trang cuối. Không nhảy theo
+    // thì người dùng bấm "Thêm" ở trang 1 và không thấy gì xảy ra. Cộng 1 vì
+    // dòng vừa thêm có thể vừa đẻ ra một trang mới; nếu không, `setPage` kéo
+    // con số thừa về trang cuối đang có.
+    paged.setPage(paged.pageCount + 1)
   }
 
   return (
@@ -125,7 +143,7 @@ export function AdUnitTable({
         )}
       </Box>
 
-      <Stack direction="row" spacing={3} sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
+      <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 3 }}>
         <TextField
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -146,6 +164,40 @@ export function AdUnitTable({
             ? `${document.listAds.length} ad unit`
             : `${rows.length} / ${document.listAds.length} ad unit`}
         </Typography>
+
+        {/* Quy ước đặt tên nằm ở placeholder chứ không ở `helperText`: dòng chữ
+            dưới ô sẽ đội ô lên cao hơn ô tìm kiếm bên trái, mà cả hàng này chỉ
+            đứng thẳng hàng khi mọi thứ cùng một chiều cao. */}
+        {!readOnly && (
+          <Stack direction="row" sx={{ alignItems: 'center', gap: 3, ml: 'auto' }}>
+            <TextField
+              label="spaceName mới"
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') addUnit()
+              }}
+              placeholder="vd home-bottom_native"
+              sx={{ minWidth: 240 }}
+            />
+            <TextField
+              select
+              label="Kiểu"
+              value={draftType}
+              onChange={(event) => setDraftType(event.target.value)}
+              sx={{ minWidth: 160 }}
+            >
+              {AD_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {AD_TYPE_LABEL[type]}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={addUnit} sx={{ flexShrink: 0 }}>
+              Thêm ad unit
+            </Button>
+          </Stack>
+        )}
       </Stack>
 
       <Box sx={{ overflowX: 'auto', border: `1px solid ${m3('outlineVariant')}`, borderRadius: `${m3Shape.medium}px` }}>
@@ -161,7 +213,7 @@ export function AdUnitTable({
           </TableHead>
 
           <TableBody>
-            {rows.map((unit) => {
+            {paged.items.map((unit) => {
               const problems = findingsBySpace.get(unit.spaceName) ?? []
               const badId = unit.id !== DEMO_AD_UNIT_ID && !AD_UNIT_ID_PATTERN.test(unit.id)
 
@@ -257,33 +309,7 @@ export function AdUnitTable({
         </Table>
       </Box>
 
-      {!readOnly && (
-        <Stack direction="row" spacing={3} sx={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 3 }}>
-          <TextField
-            label="spaceName mới"
-            value={draftName}
-            onChange={(event) => setDraftName(event.target.value)}
-            helperText="Quy ước: configName + &quot;_&quot; + hậu tố, ví dụ home-bottom_native"
-            sx={{ minWidth: 300 }}
-          />
-          <TextField
-            select
-            label="Kiểu"
-            value={draftType}
-            onChange={(event) => setDraftType(event.target.value)}
-            sx={{ minWidth: 200 }}
-          >
-            {AD_TYPES.map((type) => (
-              <MenuItem key={type} value={type}>
-                {AD_TYPE_LABEL[type]}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Button variant="outlined" startIcon={<AddIcon />} onClick={addUnit} sx={{ mt: 1 }}>
-            Thêm ad unit
-          </Button>
-        </Stack>
-      )}
+      <Pagination {...paged} unit="ad unit" />
     </Stack>
   )
 }
