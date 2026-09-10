@@ -13,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import { AD_TYPE_LABEL, isAdType } from '@/domain/ads/entities/AdType'
 import type { AdPlacement } from '@/domain/ads/entities/ShowAdsDocument'
 import type { Finding } from '@/domain/ads/validation/Finding'
+import { Pagination, usePagination } from '@/ui/components/Pagination'
 import { m3, m3Shape } from '@/ui/theme/m3Tokens'
 import { PLACEMENT_FILTER_LABEL } from '../ConfigEditorContract'
 import type { PlacementFilter } from '../ConfigEditorContract'
@@ -23,7 +24,13 @@ import type { PlacementFilter } from '../ConfigEditorContract'
  * Mỗi dòng mang một chấm màu theo mức nghiêm trọng cao nhất của vị trí đó, nên
  * quét mắt một lượt là thấy chỗ nào cần xem. Với 66 vị trí, đây là khác biệt
  * giữa "tìm thấy trong hai giây" và "cuộn tìm trong hai phút".
+ *
+ * Cắt trang 10 dòng một, không phải 25 như mặc định: cột này đứng cạnh biểu
+ * mẫu chứ không chiếm cả màn, nên một trang phải vừa tầm mắt mà không cần cuộn
+ * riêng trong cột.
  */
+const PLACEMENTS_PER_PAGE = 10
+
 const worstOf = (findings: readonly Finding[]): 'error' | 'warning' | 'check' | null => {
   if (findings.some((finding) => finding.severity === 'error')) return 'error'
   if (findings.some((finding) => finding.severity === 'warning')) return 'warning'
@@ -64,6 +71,13 @@ export function PlacementList({
   onSelect,
   onToggle,
 }: PlacementListProps) {
+  // Đổi ô tìm kiếm hay bộ lọc là đổi sang một danh sách khác, nên quay về trang
+  // 1 — đứng lại ở trang 5 của danh sách cũ chỉ cho ra một cột trống.
+  const paged = usePagination(placements, {
+    pageSize: PLACEMENTS_PER_PAGE,
+    resetKey: `${filter}\n${search}`,
+  })
+
   return (
     <Stack spacing={3} sx={{ height: '100%', minHeight: 0 }}>
       <TextField
@@ -104,7 +118,7 @@ export function PlacementList({
 
       <Box sx={{ flex: 1, minHeight: 0, overflowY: 'auto', mx: -1, px: 1 }}>
         <Stack spacing={1}>
-          {placements.map((placement) => {
+          {paged.items.map((placement) => {
             const findings = findingsByPlacement.get(placement.configName) ?? []
             const worst = worstOf(findings)
             const active = selected === placement.configName
@@ -167,6 +181,8 @@ export function PlacementList({
           )}
         </Stack>
       </Box>
+
+      <Pagination {...paged} unit="vị trí" sx={{ flexShrink: 0 }} />
     </Stack>
   )
 }

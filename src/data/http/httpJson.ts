@@ -31,7 +31,7 @@ const FALLBACK_MESSAGE: Record<number, string> = {
  * nút "tải lại và đối chiếu") với `validation` (tô sáng ô nhập sai). Nếu chỉ
  * còn lại một chuỗi thông báo thì mọi lỗi trông giống nhau.
  */
-const toAppErrorFromResponse = async (response: Response): Promise<AppError> => {
+export const toAppErrorFromResponse = async (response: Response): Promise<AppError> => {
   let body: ErrorEnvelope | null = null
   try {
     body = (await response.json()) as ErrorEnvelope

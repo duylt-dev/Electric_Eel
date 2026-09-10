@@ -32,6 +32,9 @@ model User {
   auditLogs   AuditLog[]
   createdApps FirebaseApp[]   @relation("AppCreator")
 
+  llmCredentials        UserLlmCredential[]
+  translationPreference TranslationPreference?
+
   @@index([email])
 }
 
@@ -142,4 +145,55 @@ model RateLimitHit {
 
   @@index([bucket, createdAt])
   @@index([createdAt])
+}
+
+/// Khoá API mô hình ngôn ngữ của TỪNG người dùng, mã hoá AES-256-GCM.
+///
+/// Vì sao theo người dùng chứ không theo biến môi trường: hạn mức và hoá đơn
+/// của OpenAI/Gemini tính theo khoá. Một khoá dùng chung nghĩa là một người
+/// dịch cả trăm ngôn ngữ thì cả nhóm cùng nhận 429, và không ai biết phần chi
+/// phí nào là của ai.
+///
+/// Bản mã dùng ĐÚNG cipher của service account Firebase
+/// (`data/remote-config/ServiceAccountCipher.ts`) nên cùng một khoá
+/// `CREDENTIAL_ENCRYPTION_KEY` và cùng một lệnh `pnpm rotate:key`. Tên file
+/// cipher nói "service account" là hẹp hơn thực tế — xem LLM.md §11.
+model UserLlmCredential {
+  id     String @id @default(cuid())
+  userId String
+  /// "openai" | "gemini". Không enum vì SQLite không có.
+  provider String
+  /// Khoá API đã mã hoá. Không bao giờ rời máy chủ ở dạng đọc được.
+  apiKeyCiphertext String
+  /// Bốn ký tự cuối của khoá gốc, để vẽ "••••3f9a" mà không phải giải mã.
+  /// Bốn ký tự không đủ để dựng lại khoá, nhưng đủ để người dùng nhận ra khoá nào.
+  keyHint String
+  /// Model đang chọn cho nhà cung cấp này, ví dụ "gpt-4o-mini".
+  model String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+/// Lựa chọn của một người ở màn Dịch. Tách khỏi `UserLlmCredential` vì đây là
+/// sở thích, không phải bí mật — và vì nó tồn tại cả khi chưa có khoá nào.
+model TranslationPreference {
+  /// Một người một hàng, nên chính `userId` làm khoá chính.
+  userId String @id
+  /// Nhà cung cấp đang chọn: "openai" | "gemini".
+  provider String @default("openai")
+  /// Tên dòng app, đi vào prompt làm ngữ cảnh.
+  appName String @default("")
+  /// Mô tả app — app làm gì, cho ai. Cùng một từ tiếng Anh dịch khác nhau tuỳ
+  /// app, và tên app thường không đủ để mô hình đoán ra ngữ cảnh đó.
+  appDescription String @default("")
+
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
