@@ -213,6 +213,7 @@ export function AdbLogcatScreen({ appName }: AdbLogcatScreenProps) {
 
         <LogView
           lines={shown}
+          searchQuery={state.filter.query}
           autoScroll={state.autoScroll}
           frozen={state.paused}
           onAutoScrollChange={(value) => onIntent({ type: 'AutoScrollChanged', value })}

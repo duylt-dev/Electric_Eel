@@ -2,6 +2,7 @@
 
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import type { ReactNode } from 'react'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { LogLevel, LogcatLine } from '@/domain/adb/entities/LogcatLine'
@@ -37,6 +38,7 @@ const LEVEL_COLOR: Record<LogLevel, string> = {
 
 export interface LogViewProps {
   lines: readonly LogcatLine[]
+  searchQuery: string
   autoScroll: boolean
   /** Người dùng tự cuộn lên thì tắt bám đáy; cuộn về đáy thì bật lại. */
   onAutoScrollChange: (value: boolean) => void
@@ -48,7 +50,14 @@ export interface LogViewProps {
 /** Khoảng cách tới đáy vẫn tính là "đang ở đáy". Một dòng rưỡi. */
 const BOTTOM_SLACK = 32
 
-export function LogView({ lines, autoScroll, onAutoScrollChange, frozen, emptyHint }: LogViewProps) {
+export function LogView({
+  lines,
+  searchQuery,
+  autoScroll,
+  onAutoScrollChange,
+  frozen,
+  emptyHint,
+}: LogViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const rendered = lines.length > MAX_RENDERED_LINES ? lines.slice(-MAX_RENDERED_LINES) : lines
@@ -109,7 +118,7 @@ export function LogView({ lines, autoScroll, onAutoScrollChange, frozen, emptyHi
             </Box>
           )}
           {rendered.map((line) => (
-            <Row key={line.seq} line={line} />
+            <Row key={line.seq} line={line} searchQuery={searchQuery} />
           ))}
         </>
       )}
@@ -117,7 +126,7 @@ export function LogView({ lines, autoScroll, onAutoScrollChange, frozen, emptyHi
   )
 }
 
-function Row({ line }: { line: LogcatLine }) {
+function Row({ line, searchQuery }: { line: LogcatLine; searchQuery: string }) {
   const color = LEVEL_COLOR[line.level]
   const severe = line.level === 'E' || line.level === 'F'
 
@@ -154,9 +163,48 @@ function Row({ line }: { line: LogcatLine }) {
       >
         {line.tag}
       </Box>
-      <Box component="span" sx={{ color: severe ? m3('onErrorContainer') : m3('onSurface'), minWidth: 0 }}>
-        {line.message}
+      <Box
+        component="span"
+        sx={{
+          color: severe ? m3('onErrorContainer') : m3('onSurface'),
+          minWidth: 0,
+          '& mark': {
+            borderRadius: '3px',
+            backgroundColor: m3('warningContainer'),
+            color: m3('onWarningContainer'),
+            paddingInline: '2px',
+          },
+        }}
+      >
+        {highlightText(line.message, searchQuery)}
       </Box>
     </Box>
   )
+}
+
+function highlightText(text: string, query: string): ReactNode {
+  const needle = query.trim()
+  if (needle.length === 0) return text
+
+  const parts: ReactNode[] = []
+  const lowerText = text.toLowerCase()
+  const lowerNeedle = needle.toLowerCase()
+  let cursor = 0
+  let index = lowerText.indexOf(lowerNeedle)
+
+  while (index !== -1) {
+    if (index > cursor) parts.push(text.slice(cursor, index))
+
+    const end = index + needle.length
+    parts.push(
+      <Box key={`${index}-${end}`} component="mark">
+        {text.slice(index, end)}
+      </Box>,
+    )
+    cursor = end
+    index = lowerText.indexOf(lowerNeedle, cursor)
+  }
+
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return parts.length === 0 ? text : parts
 }

@@ -111,7 +111,7 @@ export const isLive = (state: AdbLogcatState): boolean =>
   state.status === 'streaming' || state.status === 'waiting' || state.status === 'connecting'
 
 export const visibleLines = (state: AdbLogcatState): LogcatLine[] =>
-  filterLines(state.lines, state.filter)
+  filterLines(state.lines, { ...state.filter, query: '' })
 
 /**
  * Nhập những dòng mới vào đệm, cắt phần vượt trần.
