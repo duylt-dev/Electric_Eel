@@ -3,7 +3,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { ReactNode } from 'react'
 
-import { m3, m3Mono } from '../theme/m3Tokens'
+import { glass, m3, m3Shape } from '../theme/m3Tokens'
 
 /**
  * Đầu trang dùng chung cho mọi công cụ.
@@ -33,20 +33,41 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
   return (
     <Box
       component="header"
-      sx={{ pb: 6, mb: 7, borderBottom: `1px solid ${m3('outlineVariant')}` }}
+      sx={{
+        mb: 7,
+        p: { xs: 4, md: 6 },
+        border: `1px solid ${glass.border}`,
+        borderRadius: `${m3Shape.extraLarge}px`,
+        backgroundColor: glass.surfaceStrong,
+        backgroundImage: glass.highlight,
+        boxShadow: glass.shadow,
+        backdropFilter: glass.blurStrong,
+        WebkitBackdropFilter: glass.blurStrong,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          inset: 0,
+          pointerEvents: 'none',
+          borderRadius: 'inherit',
+          boxShadow: 'inset 0 1px 0 var(--glass-hairline)',
+        },
+      }}
     >
       <Typography
         component="p"
+        variant="caption"
         sx={{
-          ...m3Mono.eyebrow,
           color: m3('primary'),
           display: 'flex',
           alignItems: 'center',
-          gap: 2.5,
+          gap: 2,
           mb: 3,
+          fontWeight: 650,
           // Vạch màu trước nhãn: đủ để mắt bám vào đầu trang mà không cần thêm
           // một khối màu lớn nào khác.
-          '&::before': { content: '""', width: 26, height: 2, backgroundColor: m3('primary'), flex: 'none' },
+          '&::before': { content: '""', width: 30, height: 2, borderRadius: 999, backgroundColor: m3('primary'), flex: 'none' },
         }}
       >
         {eyebrow}
@@ -61,7 +82,7 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
             {title}
           </Typography>
           {subtitle === undefined ? null : (
-            <Typography sx={{ color: m3('onSurfaceVariant'), maxWidth: '60ch', fontSize: '1.05rem' }}>
+            <Typography sx={{ color: m3('onSurfaceVariant'), maxWidth: '62ch', fontSize: '1.03rem', lineHeight: 1.5 }}>
               {subtitle}
             </Typography>
           )}

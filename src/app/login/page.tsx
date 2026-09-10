@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { currentUser } from '@/lib/session'
 import { BRAND_NAME } from '@/ui/brand'
 import { BrandMark } from '@/ui/components/BrandMark'
-import { m3, m3Mono } from '@/ui/theme/m3Tokens'
+import { glass, m3 } from '@/ui/theme/m3Tokens'
 import { LoginForm } from './LoginForm'
 
 export const metadata: Metadata = { title: 'Đăng nhập' }
@@ -33,7 +33,7 @@ export default async function LoginPage() {
         minHeight: '100dvh',
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 440px)' },
-        bgcolor: m3('surface'),
+        bgcolor: 'transparent',
       }}
     >
       <Box
@@ -43,13 +43,15 @@ export default async function LoginPage() {
           justifyContent: 'center',
           px: { xs: 6, md: 14 },
           py: { xs: 10, md: 14 },
-          borderRight: { md: `1px solid ${m3('outlineVariant')}` },
+          borderRight: { md: `1px solid ${glass.border}` },
         }}
       >
         <Box sx={{ maxWidth: 620 }}>
           <Stack direction="row" sx={{ alignItems: 'center', gap: 3, mb: 8 }}>
             <BrandMark size={40} />
-            <Typography sx={{ ...m3Mono.eyebrow, color: m3('onSurfaceVariant') }}>{BRAND_NAME}</Typography>
+            <Typography variant="h5" sx={{ color: m3('onSurface'), lineHeight: 1 }}>
+              {BRAND_NAME}
+            </Typography>
           </Stack>
 
           <Typography variant="h1" sx={{ mb: 4 }}>
@@ -63,7 +65,9 @@ export default async function LoginPage() {
           <Stack spacing={5} sx={{ maxWidth: '60ch' }}>
             {CAPABILITIES.map(([label, description]) => (
               <Box key={label} sx={{ borderLeft: `2px solid ${m3('outlineVariant')}`, pl: 4 }}>
-                <Typography sx={{ ...m3Mono.columnHeader, color: m3('primary'), mb: 1 }}>{label}</Typography>
+                <Typography variant="caption" sx={{ color: m3('primary'), fontWeight: 650, mb: 1, display: 'block' }}>
+                  {label}
+                </Typography>
                 <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
                   {description}
                 </Typography>
@@ -79,8 +83,11 @@ export default async function LoginPage() {
           placeItems: 'center',
           px: { xs: 6, md: 10 },
           py: { xs: 10, md: 14 },
-          bgcolor: m3('surfaceContainerLow'),
-          borderTop: { xs: `1px solid ${m3('outlineVariant')}`, md: 'none' },
+          bgcolor: glass.sidebar,
+          backgroundImage: glass.highlight,
+          borderTop: { xs: `1px solid ${glass.border}`, md: 'none' },
+          backdropFilter: glass.blurStrong,
+          WebkitBackdropFilter: glass.blurStrong,
         }}
       >
         <LoginForm />

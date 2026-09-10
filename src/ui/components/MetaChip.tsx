@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box'
 import type { ReactNode } from 'react'
 
-import { m3, m3Mono, m3Shape } from '../theme/m3Tokens'
+import { glass, m3, m3Shape } from '../theme/m3Tokens'
 
 /**
  * Viên thông tin trên đầu trang: một nhãn mờ và một giá trị rõ, nằm trong một
@@ -21,16 +21,18 @@ export function MetaChip({ label, children }: MetaChipProps) {
     <Box
       component="span"
       sx={{
-        ...m3Mono.chip,
-        textTransform: 'none',
-        letterSpacing: 0,
         display: 'inline-flex',
         alignItems: 'baseline',
         gap: 1.5,
         borderRadius: `${m3Shape.full}px`,
-        border: `1px solid ${m3('outlineVariant')}`,
-        backgroundColor: m3('surfaceContainerLow'),
+        border: `1px solid ${glass.border}`,
+        backgroundColor: glass.control,
+        backdropFilter: glass.blur,
+        WebkitBackdropFilter: glass.blur,
         color: m3('onSurfaceVariant'),
+        fontSize: '0.78rem',
+        lineHeight: 1.35,
+        fontWeight: 500,
         paddingInline: '11px',
         paddingBlock: '4px',
         whiteSpace: 'nowrap',

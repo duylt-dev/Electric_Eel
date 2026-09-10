@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box'
 import type { ReactNode } from 'react'
 
-import { m3, m3Mono, m3Shape } from '../theme/m3Tokens'
+import { glass, m3, m3Mono, m3Shape } from '../theme/m3Tokens'
 
 /**
  * Nhãn trạng thái nhỏ, chữ đơn cách viết hoa.
@@ -48,6 +48,8 @@ export function StatusChip({ tone = 'neutral', children, dot = false }: StatusCh
         whiteSpace: 'nowrap',
         backgroundColor: background,
         color,
+        border: `1px solid ${glass.border}`,
+        boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.18)',
       }}
     >
       {dot ? (

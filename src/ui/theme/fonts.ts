@@ -1,50 +1,52 @@
-import { Bricolage_Grotesque, JetBrains_Mono, Roboto_Flex } from 'next/font/google'
-
 /**
- * Ba bộ chữ, ba vai trò khác nhau — đây là thứ tạo ra khác biệt lớn nhất giữa
- * "một trang MUI" và một sản phẩm có nhận dạng riêng.
+ * Liquid Glass đi với kiểu chữ hệ thống của Apple: SF Pro cho UI và SF Mono
+ * cho số liệu/mã. Trên macOS/iOS trình duyệt sẽ lấy đúng system font; trên
+ * Windows/Linux rơi về Segoe UI/Inter/Noto Sans để tiếng Việt vẫn sạch dấu.
  *
- *   display  tiêu đề. Bricolage Grotesque có bề ngang hẹp và các nét cắt chéo,
- *            nên một tiêu đề dài tiếng Việt vẫn nằm gọn một dòng.
- *   body     chữ đọc. Roboto Flex là bản biến thiên của Roboto — vẫn là chữ
- *            quen mắt của Android, nhưng chỉnh được độ đậm liên tục.
- *   mono     nhãn nhỏ, đầu bảng, mã, con số. Trong công cụ này số liệu và
- *            định danh (`ca-app-pub-…`, tên space) nhiều hơn văn xuôi, mà
- *            chữ đơn cách mới cho phép so sánh chúng theo cột.
- *
- * `subsets` phải có 'vietnamese', nếu không dấu tiếng Việt rơi về font dự
- * phòng và chữ sẽ nhảy phông ngay giữa câu. Thiếu subset thì `next build`
- * dừng — nên đây là ràng buộc được máy kiểm tra, không phải lời hứa.
- *
- * `next/font` tải phông lúc build rồi phục vụ từ cùng miền, nên không có lượt
- * đi ra fonts.googleapis.com lúc chạy và không có nháy chữ khi tải trang.
+ * Không dùng `next/font/google` ở đây vì font tải ngoài làm giao diện giữ chất
+ * Android/web hơn là cảm giác iOS. Apple không cấp SF Pro qua web font công
+ * khai, nên cách đúng cho web app là ưu tiên system stack.
  */
-export const displayFont = Bricolage_Grotesque({
-  subsets: ['vietnamese', 'latin'],
-  weight: ['600', '700'],
-  display: 'swap',
-  variable: '--font-display',
-  fallback: ['Georgia', 'serif'],
-})
+const APPLE_TEXT_STACK = [
+  '-apple-system',
+  'BlinkMacSystemFont',
+  '"SF Pro Text"',
+  '"SF Pro Display"',
+  '"Helvetica Neue"',
+  '"Segoe UI"',
+  'Inter',
+  '"Noto Sans"',
+  'Arial',
+  'sans-serif',
+].join(', ')
 
-export const bodyFont = Roboto_Flex({
-  subsets: ['vietnamese', 'latin'],
-  display: 'swap',
-  variable: '--font-body',
-  fallback: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
-})
+const APPLE_DISPLAY_STACK = [
+  '-apple-system',
+  'BlinkMacSystemFont',
+  '"SF Pro Display"',
+  '"SF Pro Text"',
+  '"Helvetica Neue"',
+  '"Segoe UI"',
+  'Inter',
+  '"Noto Sans"',
+  'Arial',
+  'sans-serif',
+].join(', ')
 
-export const monoFont = JetBrains_Mono({
-  subsets: ['vietnamese', 'latin'],
-  weight: ['400', '500', '700'],
-  display: 'swap',
-  variable: '--font-mono',
-  fallback: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
-})
+const APPLE_MONO_STACK = [
+  '"SFMono-Regular"',
+  '"SF Mono"',
+  'ui-monospace',
+  'Menlo',
+  'Monaco',
+  'Consolas',
+  '"Liberation Mono"',
+  'monospace',
+].join(', ')
 
-/** Gắn lên <html> để ba biến CSS có mặt trước khi theme đọc tới chúng. */
-export const fontVariables = [displayFont.variable, bodyFont.variable, monoFont.variable].join(' ')
+/** Giữ export này để layout không cần biết theme đang dùng web font hay system font. */
+export const fontVariables = ''
 
-export const DISPLAY_FONT_STACK = `var(--font-display), Georgia, serif`
-export const BODY_FONT_STACK = `var(--font-body), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`
-export const MONO_FONT_STACK = `var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace`
+export const DISPLAY_FONT_STACK = APPLE_DISPLAY_STACK
+export const BODY_FONT_STACK = APPLE_TEXT_STACK
+export const MONO_FONT_STACK = APPLE_MONO_STACK

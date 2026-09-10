@@ -13,7 +13,7 @@ import { UserMenu } from './UserMenu'
 import { toolGroups } from './toolRegistry'
 import { BRAND_NAME, BRAND_TAGLINE } from '../brand'
 import { BrandMark } from '../components/BrandMark'
-import { m3, m3Mono } from '../theme/m3Tokens'
+import { glass, m3 } from '../theme/m3Tokens'
 
 const SIDEBAR_WIDTH = 236
 const CONTENT_MAX_WIDTH = 1240
@@ -47,7 +47,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
         <Typography variant="h5" sx={{ lineHeight: 1.1 }} noWrap>
           {BRAND_NAME}
         </Typography>
-        <Typography sx={{ ...m3Mono.columnHeader, color: m3('onSurfaceVariant') }} noWrap>
+        <Typography variant="caption" sx={{ color: m3('onSurfaceVariant'), fontWeight: 500, opacity: 0.74 }} noWrap>
           {BRAND_TAGLINE}
         </Typography>
       </Box>
@@ -55,7 +55,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
   )
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: m3('surface') }}>
+    <Box sx={{ display: 'flex', minHeight: '100dvh', bgcolor: 'transparent' }}>
       <Box
         component="nav"
         aria-label="Công cụ"
@@ -65,12 +65,17 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
           width: SIDEBAR_WIDTH,
           flexShrink: 0,
           gap: 6,
-          px: 4,
-          py: 6,
+          px: 3.5,
+          py: 5,
           position: 'sticky',
           top: 0,
           height: '100dvh',
-          borderRight: `1px solid ${m3('outlineVariant')}`,
+          backgroundColor: glass.sidebar,
+          backgroundImage: glass.highlight,
+          borderRight: `1px solid ${glass.border}`,
+          boxShadow: 'inset -1px 0 0 var(--glass-hairline), 14px 0 48px -44px rgb(0 0 0 / 0.58)',
+          backdropFilter: glass.blurStrong,
+          WebkitBackdropFilter: glass.blurStrong,
         }}
       >
         <Box component={Link} href="/" sx={{ textDecoration: 'none', color: 'inherit', px: 1 }}>
@@ -89,8 +94,12 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
             position: 'sticky',
             top: 0,
             zIndex: 10,
-            bgcolor: m3('surface'),
-            borderBottom: `1px solid ${m3('outlineVariant')}`,
+            backgroundColor: glass.bar,
+            backgroundImage: glass.highlight,
+            borderBottom: `1px solid ${glass.border}`,
+            boxShadow: 'inset 0 -1px 0 var(--glass-hairline)',
+            backdropFilter: glass.blurStrong,
+            WebkitBackdropFilter: glass.blurStrong,
           }}
         >
           <Stack
@@ -99,7 +108,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
               alignItems: 'center',
               gap: 3,
               px: { xs: 4, md: 8 },
-              py: 3,
+              py: 2.5,
               maxWidth: CONTENT_MAX_WIDTH,
               mx: 'auto',
               width: '100%',
@@ -115,7 +124,10 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
             sx={{
               display: { md: 'none' },
               px: 2,
-              borderTop: `1px solid ${m3('outlineVariant')}`,
+              borderTop: `1px solid ${glass.border}`,
+              backgroundColor: glass.bar,
+              backdropFilter: glass.blurStrong,
+              WebkitBackdropFilter: glass.blurStrong,
             }}
           >
             <ToolNav groups={groups} pathname={pathname} direction="row" />
@@ -131,7 +143,7 @@ export function AppShell({ user, onSignOut, children }: AppShellProps) {
             maxWidth: CONTENT_MAX_WIDTH,
             mx: 'auto',
             px: { xs: 4, md: 8 },
-            pt: 8,
+            pt: 7,
             pb: 16,
           }}
         >

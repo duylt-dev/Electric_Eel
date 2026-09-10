@@ -32,19 +32,84 @@ const declarations = (scheme: M3ColorScheme): string =>
 export const m3GlobalCss = `
 :root {
 ${declarations(m3Light)}
+  --glass-surface: rgb(255 255 255 / 0.68);
+  --glass-surface-strong: rgb(255 255 255 / 0.82);
+  --glass-surface-soft: rgb(255 255 255 / 0.48);
+  --glass-bar: rgb(246 248 252 / 0.68);
+  --glass-sidebar: rgb(238 242 248 / 0.58);
+  --glass-control: rgb(255 255 255 / 0.48);
+  --glass-selected: rgb(0 122 255 / 0.14);
+  --glass-border: rgb(20 32 48 / 0.11);
+  --glass-hairline: rgb(255 255 255 / 0.62);
+  --glass-shadow: 0 1px 1px rgb(15 23 42 / 0.04), 0 18px 48px -34px rgb(15 23 42 / 0.34);
+  --glass-highlight: linear-gradient(145deg, rgb(255 255 255 / 0.74), rgb(255 255 255 / 0.26) 42%, rgb(255 255 255 / 0.54));
+  --glass-page-aura:
+    radial-gradient(circle at 16% 8%, rgb(0 122 255 / 0.15), transparent 34rem),
+    radial-gradient(circle at 92% 0%, rgb(88 86 214 / 0.13), transparent 30rem),
+    radial-gradient(circle at 78% 78%, rgb(52 199 89 / 0.10), transparent 30rem),
+    linear-gradient(145deg, #f7f9fc, #eef3f8 48%, #f9fbfd);
   color-scheme: light;
 }
 [data-mui-color-scheme="dark"] {
 ${declarations(m3Dark)}
+  --glass-surface: rgb(25 28 32 / 0.58);
+  --glass-surface-strong: rgb(31 34 38 / 0.76);
+  --glass-surface-soft: rgb(25 28 32 / 0.38);
+  --glass-bar: rgb(35 39 44 / 0.60);
+  --glass-sidebar: rgb(38 42 48 / 0.52);
+  --glass-control: rgb(255 255 255 / 0.07);
+  --glass-selected: rgb(10 132 255 / 0.20);
+  --glass-border: rgb(255 255 255 / 0.11);
+  --glass-hairline: rgb(255 255 255 / 0.17);
+  --glass-shadow: 0 1px 1px rgb(0 0 0 / 0.22), 0 24px 64px -38px rgb(0 0 0 / 0.92);
+  --glass-highlight: linear-gradient(145deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.045) 46%, rgb(255 255 255 / 0.095));
+  --glass-page-aura:
+    radial-gradient(circle at 12% 0%, rgb(10 132 255 / 0.17), transparent 32rem),
+    radial-gradient(circle at 95% 2%, rgb(94 92 230 / 0.14), transparent 30rem),
+    radial-gradient(circle at 82% 78%, rgb(48 209 88 / 0.09), transparent 28rem),
+    linear-gradient(145deg, #101418, #151b20 50%, #0d1115);
   color-scheme: dark;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-mui-color-scheme="light"]) {
 ${declarations(m3Dark)}
+    --glass-surface: rgb(25 28 32 / 0.58);
+    --glass-surface-strong: rgb(31 34 38 / 0.76);
+    --glass-surface-soft: rgb(25 28 32 / 0.38);
+    --glass-bar: rgb(35 39 44 / 0.60);
+    --glass-sidebar: rgb(38 42 48 / 0.52);
+    --glass-control: rgb(255 255 255 / 0.07);
+    --glass-selected: rgb(10 132 255 / 0.20);
+    --glass-border: rgb(255 255 255 / 0.11);
+    --glass-hairline: rgb(255 255 255 / 0.17);
+    --glass-shadow: 0 1px 1px rgb(0 0 0 / 0.22), 0 24px 64px -38px rgb(0 0 0 / 0.92);
+    --glass-highlight: linear-gradient(145deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.045) 46%, rgb(255 255 255 / 0.095));
+    --glass-page-aura:
+      radial-gradient(circle at 12% 0%, rgb(10 132 255 / 0.17), transparent 32rem),
+      radial-gradient(circle at 95% 2%, rgb(94 92 230 / 0.14), transparent 30rem),
+      radial-gradient(circle at 82% 78%, rgb(48 209 88 / 0.09), transparent 28rem),
+      linear-gradient(145deg, #101418, #151b20 50%, #0d1115);
     color-scheme: dark;
   }
 }
 `
+
+export const glass = {
+  surface: 'var(--glass-surface)',
+  surfaceStrong: 'var(--glass-surface-strong)',
+  surfaceSoft: 'var(--glass-surface-soft)',
+  bar: 'var(--glass-bar)',
+  sidebar: 'var(--glass-sidebar)',
+  control: 'var(--glass-control)',
+  selected: 'var(--glass-selected)',
+  border: 'var(--glass-border)',
+  hairline: 'var(--glass-hairline)',
+  shadow: 'var(--glass-shadow)',
+  highlight: 'var(--glass-highlight)',
+  pageAura: 'var(--glass-page-aura)',
+  blur: 'blur(22px) saturate(1.35)',
+  blurStrong: 'blur(34px) saturate(1.5)',
+} as const
 
 /**
  * Bán kính bo góc theo M3. Con số nói lên vai trò: nút bấm bo tròn hẳn, thẻ
@@ -61,25 +126,27 @@ export const m3Shape = {
 } as const
 
 /**
- * Thang chữ M3. Giữ nguyên tên vai trò của M3 thay vì quy về h1..h6 của MUI —
- * người quen Android đọc `titleMedium` là biết ngay nó to bằng chừng nào.
+ * Thang chữ UI theo tinh thần iOS/SF Pro. Giữ tên vai trò M3 để không phải đổi
+ * các màn hình đang dùng theme MUI, nhưng số đo/weight đã được kéo về kiểu
+ * system typography của Apple: chữ lớn nhẹ hơn, thân chữ gọn, nút rõ nhưng
+ * không bị cảm giác Android label.
  */
 export const m3Type = {
-  displayLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(2.5rem, 6vw, 3.5rem)', lineHeight: 1.03, letterSpacing: '-0.028em', fontWeight: 700 },
-  displayMedium: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(2rem, 4.5vw, 2.8rem)', lineHeight: 1.06, letterSpacing: '-0.025em', fontWeight: 700 },
-  displaySmall: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(1.7rem, 3.6vw, 2.25rem)', lineHeight: 1.1, letterSpacing: '-0.022em', fontWeight: 700 },
-  headlineLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: '2rem', lineHeight: 1.14, letterSpacing: '-0.02em', fontWeight: 700 },
-  headlineMedium: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.625rem', lineHeight: 1.18, letterSpacing: '-0.018em', fontWeight: 700 },
-  headlineSmall: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.35rem', lineHeight: 1.22, letterSpacing: '-0.014em', fontWeight: 600 },
-  titleLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.16rem', lineHeight: 1.3, letterSpacing: '-0.012em', fontWeight: 600 },
-  titleMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.975rem', lineHeight: 1.45, letterSpacing: 0, fontWeight: 600 },
-  titleSmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.875rem', lineHeight: 1.4, letterSpacing: 0, fontWeight: 600 },
-  bodyLarge: { fontFamily: BODY_FONT_STACK, fontSize: '0.975rem', lineHeight: 1.6, letterSpacing: 0, fontWeight: 400 },
-  bodyMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.875rem', lineHeight: 1.55, letterSpacing: 0, fontWeight: 400 },
-  bodySmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.8125rem', lineHeight: 1.5, letterSpacing: 0, fontWeight: 400 },
-  labelLarge: { fontFamily: BODY_FONT_STACK, fontSize: '0.875rem', lineHeight: 1.3, letterSpacing: '0.005em', fontWeight: 600 },
-  labelMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.8125rem', lineHeight: 1.3, letterSpacing: '0.01em', fontWeight: 600 },
-  labelSmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.75rem', lineHeight: 1.3, letterSpacing: '0.02em', fontWeight: 600 },
+  displayLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(2.35rem, 5.4vw, 3.25rem)', lineHeight: 1.06, letterSpacing: 0, fontWeight: 650 },
+  displayMedium: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(1.95rem, 4.1vw, 2.7rem)', lineHeight: 1.08, letterSpacing: 0, fontWeight: 650 },
+  displaySmall: { fontFamily: DISPLAY_FONT_STACK, fontSize: 'clamp(1.65rem, 3.2vw, 2.2rem)', lineHeight: 1.12, letterSpacing: 0, fontWeight: 650 },
+  headlineLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.9rem', lineHeight: 1.16, letterSpacing: 0, fontWeight: 650 },
+  headlineMedium: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.55rem', lineHeight: 1.2, letterSpacing: 0, fontWeight: 650 },
+  headlineSmall: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.3rem', lineHeight: 1.24, letterSpacing: 0, fontWeight: 600 },
+  titleLarge: { fontFamily: DISPLAY_FONT_STACK, fontSize: '1.12rem', lineHeight: 1.28, letterSpacing: 0, fontWeight: 600 },
+  titleMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.96rem', lineHeight: 1.36, letterSpacing: 0, fontWeight: 590 },
+  titleSmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.86rem', lineHeight: 1.34, letterSpacing: 0, fontWeight: 590 },
+  bodyLarge: { fontFamily: BODY_FONT_STACK, fontSize: '0.98rem', lineHeight: 1.48, letterSpacing: 0, fontWeight: 400 },
+  bodyMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.88rem', lineHeight: 1.44, letterSpacing: 0, fontWeight: 400 },
+  bodySmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.78rem', lineHeight: 1.38, letterSpacing: 0, fontWeight: 400 },
+  labelLarge: { fontFamily: BODY_FONT_STACK, fontSize: '0.875rem', lineHeight: 1.25, letterSpacing: 0, fontWeight: 590 },
+  labelMedium: { fontFamily: BODY_FONT_STACK, fontSize: '0.8rem', lineHeight: 1.24, letterSpacing: 0, fontWeight: 590 },
+  labelSmall: { fontFamily: BODY_FONT_STACK, fontSize: '0.72rem', lineHeight: 1.22, letterSpacing: 0, fontWeight: 590 },
 } as const
 
 /**

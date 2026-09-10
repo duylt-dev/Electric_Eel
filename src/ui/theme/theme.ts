@@ -4,7 +4,7 @@ import { createTheme } from '@mui/material/styles'
 
 import { BODY_FONT_STACK, MONO_FONT_STACK } from './fonts'
 import { m3Dark, m3Light } from './generatedPalette'
-import { m3, m3Elevation, m3Mono, m3Shape, m3Type } from './m3Tokens'
+import { glass, m3, m3Elevation, m3Mono, m3Shape, m3Type } from './m3Tokens'
 
 /**
  * Theme MUI dựng theo Material 3.
@@ -71,8 +71,13 @@ export const appTheme = createTheme({
       styleOverrides: {
         body: {
           backgroundColor: m3('surface'),
+          backgroundImage: glass.pageAura,
+          backgroundAttachment: 'fixed',
+          backgroundRepeat: 'no-repeat',
+          minHeight: '100dvh',
           color: m3('onSurface'),
           WebkitFontSmoothing: 'antialiased',
+          MozOsxFontSmoothing: 'grayscale',
         },
         // Tiêu đề ngắt dòng cho cân hai vế thay vì bỏ lại một từ lẻ ở dòng cuối.
         'h1, h2, h3, h4': { textWrap: 'balance' },
@@ -95,22 +100,55 @@ export const appTheme = createTheme({
       defaultProps: { disableElevation: true },
       styleOverrides: {
         // Nút M3 bo tròn hẳn — đây là chi tiết dễ nhận ra nhất giữa M2 và M3.
-        root: { borderRadius: m3Shape.full, paddingInline: 20, minHeight: 38 },
-        outlined: { borderColor: m3('outlineVariant') },
+        root: {
+          borderRadius: m3Shape.full,
+          paddingInline: 20,
+          minHeight: 38,
+          boxShadow: 'none',
+          fontWeight: 600,
+          transition: 'background-color 160ms ease, border-color 160ms ease, transform 160ms ease',
+          '&:hover': { transform: 'translateY(-1px)' },
+        },
+        contained: {
+          backgroundImage: 'none',
+          backgroundColor: m3('primary'),
+          boxShadow: '0 10px 24px -18px rgb(0 122 255 / 0.74)',
+          '&:hover': { boxShadow: '0 12px 28px -18px rgb(0 122 255 / 0.78)' },
+        },
+        outlined: {
+          borderColor: glass.border,
+          backgroundColor: glass.control,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
+        },
         text: { paddingInline: 12 },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: { borderRadius: m3Shape.small, fontWeight: 500 },
-        outlined: { borderColor: m3('outlineVariant') },
+        root: {
+          borderRadius: m3Shape.full,
+          fontWeight: 590,
+          backgroundColor: glass.control,
+          borderColor: glass.border,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
+        },
+        outlined: { borderColor: glass.border },
         label: { paddingInline: 10 },
       },
     },
     MuiPaper: {
       defaultProps: { elevation: 0 },
       styleOverrides: {
-        root: { backgroundImage: 'none' },
+        root: {
+          backgroundImage: glass.highlight,
+          backgroundColor: glass.surface,
+          border: `1px solid ${glass.border}`,
+          boxShadow: glass.shadow,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
+        },
         rounded: { borderRadius: m3Shape.large },
       },
     },
@@ -119,12 +157,12 @@ export const appTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: m3Shape.large,
-          // Nền nổi dùng containerLow chứ không phải containerLowest: ở chế độ
-          // tối, containerLowest nằm DƯỚI nền trang (tone 3 so với tone 5) nên
-          // thẻ sẽ trông như bị khoét xuống thay vì nổi lên.
-          backgroundColor: m3('surfaceContainerLow'),
-          border: `1px solid ${m3('outlineVariant')}`,
-          boxShadow: m3Elevation[1],
+          backgroundColor: glass.surface,
+          backgroundImage: glass.highlight,
+          border: `1px solid ${glass.border}`,
+          boxShadow: glass.shadow,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
         },
       },
     },
@@ -132,9 +170,12 @@ export const appTheme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: m3Shape.extraLarge,
-          backgroundColor: m3('surfaceContainerLow'),
-          border: `1px solid ${m3('outlineVariant')}`,
+          backgroundColor: glass.surfaceStrong,
+          backgroundImage: glass.highlight,
+          border: `1px solid ${glass.border}`,
           boxShadow: m3Elevation[4],
+          backdropFilter: glass.blurStrong,
+          WebkitBackdropFilter: glass.blurStrong,
         },
       },
     },
@@ -142,8 +183,19 @@ export const appTheme = createTheme({
     MuiTextField: { defaultProps: { size: 'small', variant: 'outlined' } },
     MuiOutlinedInput: {
       styleOverrides: {
-        root: { borderRadius: m3Shape.small, backgroundColor: m3('surfaceContainerLowest') },
-        notchedOutline: { borderColor: m3('outline') },
+        root: {
+          borderRadius: m3Shape.large,
+          backgroundColor: glass.control,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
+          transition: 'background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease',
+          '&.Mui-focused': {
+            backgroundColor: glass.surfaceSoft,
+            boxShadow: '0 0 0 4px rgb(0 122 255 / 0.14)',
+          },
+        },
+        input: { fontWeight: 450 },
+        notchedOutline: { borderColor: glass.border },
       },
     },
     MuiTooltip: {
@@ -160,7 +212,13 @@ export const appTheme = createTheme({
     MuiTab: { styleOverrides: { root: { textTransform: 'none', ...m3Type.titleSmall, minHeight: 48 } } },
     MuiAlert: {
       styleOverrides: {
-        root: { borderRadius: m3Shape.medium, border: `1px solid ${m3('outlineVariant')}` },
+        root: {
+          borderRadius: m3Shape.medium,
+          border: `1px solid ${glass.border}`,
+          backgroundColor: glass.surfaceStrong,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
+        },
         message: m3Type.bodyMedium,
       },
     },
@@ -169,10 +227,17 @@ export const appTheme = createTheme({
         root: {
           borderRadius: m3Shape.medium,
           minHeight: 44,
+          transition: 'background-color 160ms ease, transform 160ms ease',
+          '&:hover': {
+            backgroundColor: glass.control,
+            transform: 'translateX(1px)',
+          },
           '&.Mui-selected': {
-            backgroundColor: m3('secondaryContainer'),
-            color: m3('onSecondaryContainer'),
-            '&:hover': { backgroundColor: m3('secondaryContainer') },
+            backgroundColor: glass.selected,
+            color: m3('onSurface'),
+            border: `1px solid ${glass.border}`,
+            boxShadow: 'inset 0 1px 0 var(--glass-hairline)',
+            '&:hover': { backgroundColor: glass.selected },
           },
         },
       },
@@ -185,7 +250,9 @@ export const appTheme = createTheme({
         head: {
           ...m3Mono.columnHeader,
           color: m3('onSurfaceVariant'),
-          backgroundColor: m3('surfaceContainer'),
+          backgroundColor: glass.surfaceStrong,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
           whiteSpace: 'nowrap',
         },
       },

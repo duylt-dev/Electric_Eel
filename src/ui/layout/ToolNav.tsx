@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 
 import type { ToolDefinition, ToolGroup } from './toolRegistry'
-import { m3, m3Mono, m3Shape } from '../theme/m3Tokens'
+import { glass, m3, m3Shape } from '../theme/m3Tokens'
 
 /**
  * Danh sách công cụ chia theo khối, gập mở được, vẽ theo hai hướng.
@@ -72,7 +72,13 @@ export function ToolNav({ groups, pathname, direction }: ToolNavProps) {
         const label = (
           <Typography
             component="span"
-            sx={{ ...m3Mono.columnHeader, whiteSpace: 'nowrap', minWidth: 0 }}
+            variant="caption"
+            sx={{
+              whiteSpace: 'nowrap',
+              minWidth: 0,
+              fontWeight: 600,
+              color: 'inherit',
+            }}
             noWrap
           >
             {group.audience.label}
@@ -90,7 +96,7 @@ export function ToolNav({ groups, pathname, direction }: ToolNavProps) {
               gap: 2,
               px: 3,
               color: m3('onSurfaceVariant'),
-              opacity: 0.42,
+              opacity: 0.5,
               minWidth: 0,
             }}
           >
@@ -111,20 +117,20 @@ export function ToolNav({ groups, pathname, direction }: ToolNavProps) {
               display: 'flex',
               alignItems: 'center',
               gap: 1.5,
-              px: 3,
+              px: 2.5,
               py: 1,
               width: vertical ? '100%' : 'auto',
               minWidth: 0,
               appearance: 'none',
               border: 'none',
-              borderRadius: `${m3Shape.small}px`,
+              borderRadius: `${m3Shape.full}px`,
               background: 'none',
               font: 'inherit',
               textAlign: 'left',
               cursor: 'pointer',
               color: m3('onSurfaceVariant'),
               transition: 'color 120ms ease, background-color 120ms ease',
-              '&:hover': { color: m3('onSurface'), backgroundColor: m3('surfaceContainerLow') },
+              '&:hover': { color: m3('onSurface'), backgroundColor: glass.control },
             }}
           >
             <ExpandMoreIcon
@@ -179,13 +185,6 @@ export function ToolNav({ groups, pathname, direction }: ToolNavProps) {
                     const planned = tool.status === 'planned'
                     const Icon = tool.icon
 
-                    // Cạnh màu: bên trái khi xếp dọc, bên dưới khi xếp ngang. Đây
-                    // là dấu hiệu duy nhất của mục đang mở ngoài màu nền, nên nó
-                    // phải dày hơn viền thường (2px) mới thấy được.
-                    const edge = vertical
-                      ? { borderLeft: `2px solid ${active ? m3('primary') : m3('outlineVariant')}` }
-                      : { borderBottom: `2px solid ${active ? m3('primary') : 'transparent'}` }
-
                     const content = (
                       <Box
                         sx={{
@@ -193,24 +192,25 @@ export function ToolNav({ groups, pathname, direction }: ToolNavProps) {
                           alignItems: 'center',
                           gap: 2.5,
                           px: 3,
-                          py: 2.5,
+                          py: 2.25,
                           minWidth: 0,
                           whiteSpace: 'nowrap',
                           cursor: planned ? 'not-allowed' : 'pointer',
                           opacity: planned ? 0.42 : 1,
                           color: active ? m3('onSurface') : m3('onSurfaceVariant'),
-                          backgroundColor: active ? m3('surfaceContainerLow') : 'transparent',
-                          borderRadius: vertical
-                            ? `0 ${m3Shape.small}px ${m3Shape.small}px 0`
-                            : `${m3Shape.small}px ${m3Shape.small}px 0 0`,
-                          ...edge,
+                          backgroundColor: active ? glass.selected : 'transparent',
+                          backdropFilter: active ? glass.blur : undefined,
+                          WebkitBackdropFilter: active ? glass.blur : undefined,
+                          borderRadius: `${m3Shape.full}px`,
+                          border: `1px solid ${active ? glass.hairline : 'transparent'}`,
+                          boxShadow: active ? 'inset 0 1px 0 var(--glass-hairline)' : 'none',
                           transition:
-                            'background-color 120ms ease, color 120ms ease, border-color 120ms ease',
+                            'background-color 120ms ease, color 120ms ease, border-color 120ms ease, box-shadow 120ms ease',
                           '&:hover': planned
                             ? undefined
                             : {
                                 color: m3('onSurface'),
-                                backgroundColor: m3('surfaceContainerLow'),
+                                backgroundColor: active ? glass.selected : glass.control,
                               },
                         }}
                       >

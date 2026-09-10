@@ -2,7 +2,7 @@ import Box from '@mui/material/Box'
 import type { SxProps, Theme } from '@mui/material/styles'
 import type { ReactNode } from 'react'
 
-import { m3, m3Elevation, m3Shape } from '../theme/m3Tokens'
+import { glass, m3Shape } from '../theme/m3Tokens'
 
 /**
  * Hộp chứa nội dung rộng hơn bề ngang trang: bảng, sơ đồ, khối JSON.
@@ -17,10 +17,13 @@ export function Scroller({ children, sx }: { children: ReactNode; sx?: SxProps<T
       sx={[
         {
           overflowX: 'auto',
-          border: `1px solid ${m3('outlineVariant')}`,
+          border: `1px solid ${glass.border}`,
           borderRadius: `${m3Shape.large}px`,
-          backgroundColor: m3('surfaceContainerLow'),
-          boxShadow: m3Elevation[1],
+          backgroundColor: glass.surface,
+          backgroundImage: glass.highlight,
+          boxShadow: glass.shadow,
+          backdropFilter: glass.blur,
+          WebkitBackdropFilter: glass.blur,
         },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
