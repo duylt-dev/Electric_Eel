@@ -45,9 +45,16 @@ const KINDS_WITH_PUBLIC_DETAIL: ReadonlySet<AppErrorKind> = new Set<AppErrorKind
   'conflict',
 ])
 
+/**
+ * Cùng danh sách trên, cho những chỗ trả lỗi KHÔNG đi qua `jsonError` — luồng
+ * nhị phân đã mở rồi thì lỗi phải đi bằng một khung `failed` trong thân luồng,
+ * và khung đó cũng phải lọc `detail` theo đúng một luật, không có luật thứ hai.
+ */
+export const canExposeErrorDetail = (kind: AppErrorKind): boolean => KINDS_WITH_PUBLIC_DETAIL.has(kind)
+
 export function jsonError(error: AppError): NextResponse<ApiErrorBody> {
   const status = STATUS_BY_KIND[error.kind] ?? 500
-  const exposeDetail = KINDS_WITH_PUBLIC_DETAIL.has(error.kind) && error.detail !== undefined
+  const exposeDetail = canExposeErrorDetail(error.kind) && error.detail !== undefined
 
   // Ghi log mọi lỗi có chi tiết bị giữ lại, không chỉ lỗi 5xx. Nếu không, chi
   // tiết của một lỗi 403 từ Firebase sẽ không xuất hiện ở đâu cả — vừa không

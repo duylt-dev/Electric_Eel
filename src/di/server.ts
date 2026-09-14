@@ -7,11 +7,33 @@ import { PrismaAuditLog } from '@/data/db/PrismaAuditLog'
 import { PrismaRateLimit } from '@/data/db/PrismaRateLimit'
 import { PrismaTranslationSettings } from '@/data/db/PrismaTranslationSettings'
 import { PrismaUserRepository } from '@/data/db/PrismaUserRepository'
+import { TangoMirrorGateway } from '@/data/device-mirror/TangoMirrorGateway'
+import { readMirrorSettings } from '@/data/device-mirror/mirrorSettings'
 import { FirebaseRemoteConfigRepository } from '@/data/remote-config/FirebaseRemoteConfigRepository'
 import { HttpLlmModelCatalog } from '@/data/translation/HttpLlmModelCatalog'
 import { LlmStringTranslator } from '@/data/translation/LlmStringTranslator'
 import { buildProviderConfig, readRuntimeOptions } from '@/data/translation/translationProvider'
+import { MirrorSessionRegistry } from '@/domain/device-mirror/MirrorSessionRegistry'
+import type { MirrorDeviceSession } from '@/domain/device-mirror/repositories/MirrorDeviceGateway'
 import type { LlmProviderName } from '@/domain/translation/entities/LlmProvider'
+
+/**
+ * Bảng phiên mirror đang sống, gắn vào `globalThis` — CÙNG một lý do
+ * `prismaClient.ts` giữ `PrismaClient` ở đó: Turbopack đánh giá lại module
+ * này qua mỗi lần HMR của bất kỳ file nào nó import tới, và một biến module
+ * thường sẽ bị dựng lại theo. Với Prisma, hậu quả là rò kết nối; ở đây hậu
+ * quả nặng hơn — mọi phiên scrcpy đang mở trở thành "phiên ma": vẫn chạy thật
+ * trên máy (tiến trình `app_process` không hề biết module JS vừa bị nạp lại),
+ * nhưng không route nào còn giữ tham chiếu để `release()`/`close()` nó nữa.
+ */
+const globalForMirror = globalThis as unknown as {
+  __eelMirrorSessions?: MirrorSessionRegistry<MirrorDeviceSession>
+}
+
+function globalRegistry(): MirrorSessionRegistry<MirrorDeviceSession> {
+  globalForMirror.__eelMirrorSessions ??= new MirrorSessionRegistry<MirrorDeviceSession>()
+  return globalForMirror.__eelMirrorSessions
+}
 
 /**
  * Composition root phía server: nơi DUY NHẤT được phép nối cổng ở domain với
@@ -27,6 +49,8 @@ import type { LlmProviderName } from '@/domain/translation/entities/LlmProvider'
  * hết, nên chặn bằng công cụ chứ không bằng lời dặn.
  */
 const appDirectory = new PrismaAppDirectory()
+/** Dùng chung cho `adb.shell` và `deviceMirror.gateway` — không giữ trạng thái, spawn xong là quên. */
+const adbShell = new ProcessAdbShell()
 
 export const serverContainer = {
   appDirectory,
@@ -64,8 +88,19 @@ export const serverContainer = {
    * tham số dòng lệnh, và cũng là chỗ duy nhất kiểm tra chúng.
    */
   adb: {
-    shell: new ProcessAdbShell(),
+    shell: adbShell,
     settings: () => readAdbSettings(),
+  },
+  /**
+   * Công cụ Màn hình máy (mirror). `gateway` là MỘT thể hiện dùng chung —
+   * khác `translation.translatorFor` — vì `TangoMirrorGateway` không giữ
+   * trạng thái của riêng người dùng nào; mọi phiên đăng ký qua `sessions`
+   * (registry) mới là nơi phân biệt ai đang mở phiên nào.
+   */
+  deviceMirror: {
+    settings: () => readMirrorSettings(),
+    gateway: new TangoMirrorGateway(adbShell, () => readMirrorSettings()),
+    sessions: globalRegistry(),
   },
 } as const
 

@@ -1,4 +1,6 @@
 import { HttpAdbRepository } from '@/data/adb/HttpAdbRepository'
+import { HttpMirrorRepository } from '@/data/device-mirror/HttpMirrorRepository'
+import { WebCodecsVideoSink } from '@/data/device-mirror/WebCodecsVideoSink'
 import { HttpRemoteConfigRepository } from '@/data/remote-config/HttpRemoteConfigRepository'
 import { HttpTranslationRepository } from '@/data/translation/HttpTranslationRepository'
 import { HttpTranslationSettingsRepository } from '@/data/translation/HttpTranslationSettingsRepository'
@@ -21,6 +23,16 @@ export const clientContainer = {
   translationSettings: new HttpTranslationSettingsRepository(),
   /** Cổng adb — gọi Route Handler; `adb` thật chạy ở máy chủ. */
   adb: new HttpAdbRepository(),
+  deviceMirror: {
+    repository: new HttpMirrorRepository(),
+    /**
+     * HÀM DỰNG, không phải instance — mỗi màn hình mirror cần `<canvas>` +
+     * `VideoDecoder` RIÊNG của nó (dùng chung một sink giữa các lần mở màn
+     * hình sẽ vẽ khung của phiên cũ lên canvas của phiên mới). Cùng lý do
+     * `translatorFor` trong `di/server.ts` là hàm chứ không phải giá trị.
+     */
+    createVideoSink: () => new WebCodecsVideoSink(),
+  },
 } as const
 
 export type ClientContainer = typeof clientContainer
