@@ -3,7 +3,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import type { ReactNode } from 'react'
 
-import { glass, m3, m3Shape } from '../theme/m3Tokens'
+import { m3 } from '../theme/m3Tokens'
 
 /**
  * Đầu trang dùng chung cho mọi công cụ.
@@ -11,9 +11,15 @@ import { glass, m3, m3Shape } from '../theme/m3Tokens'
  * Bốn tầng, đọc từ trên xuống theo đúng thứ tự người ta cần:
  *
  *   eyebrow   đang ở đâu trong hệ thống — chữ đơn cách nhỏ, có một vạch màu dẫn
- *   title     trang này là gì — chữ tiêu đề, cỡ lớn
+ *   title     trang này là gì — chữ tiêu đề
  *   subtitle  vì sao nó tồn tại — một câu, không quá 60 ký tự một dòng
  *   meta      những con số đọc lướt là biết — hàng viên thông tin
+ *
+ * Cố ý là chữ trần, KHÔNG bọc trong thẻ kính. Đầu trang chỉ nói người dùng
+ * đang ở đâu; việc họ vào trang để làm nằm ở bảng, danh sách hay khung phía
+ * dưới, và những thứ đó đã có khung riêng. Bọc thêm một lớp viền + đệm là mất
+ * ngót trăm pixel chiều cao ở mọi trang cho một cái hộp không chứa gì để thao
+ * tác. Muốn đầu trang nổi hơn thì sửa chữ, đừng thêm khung.
  *
  * Gom thành một component thay vì mỗi trang tự dựng: thêm công cụ thứ hai thì
  * nó giống công cụ thứ nhất mà không ai phải nhớ khoảng cách bao nhiêu, và sửa
@@ -31,30 +37,7 @@ export interface PageHeaderProps {
 
 export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHeaderProps) {
   return (
-    <Box
-      component="header"
-      sx={{
-        mb: 7,
-        p: { xs: 4, md: 6 },
-        border: `1px solid ${glass.border}`,
-        borderRadius: `${m3Shape.extraLarge}px`,
-        backgroundColor: glass.surfaceStrong,
-        backgroundImage: glass.highlight,
-        boxShadow: glass.shadow,
-        backdropFilter: glass.blurStrong,
-        WebkitBackdropFilter: glass.blurStrong,
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          borderRadius: 'inherit',
-          boxShadow: 'inset 0 1px 0 var(--glass-hairline)',
-        },
-      }}
-    >
+    <Box component="header" sx={{ mb: 4 }}>
       <Typography
         component="p"
         variant="caption"
@@ -63,7 +46,7 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          mb: 3,
+          mb: 1.5,
           fontWeight: 650,
           // Vạch màu trước nhãn: đủ để mắt bám vào đầu trang mà không cần thêm
           // một khối màu lớn nào khác.
@@ -75,16 +58,16 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
 
       <Stack
         direction={{ xs: 'column', md: 'row' }}
-        sx={{ alignItems: { md: 'flex-end' }, justifyContent: 'space-between', gap: 4 }}
+        sx={{ alignItems: { md: 'flex-end' }, justifyContent: 'space-between', gap: 3 }}
       >
         <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h1" sx={{ mb: subtitle === undefined ? 0 : 2 }}>
+          {/* Vẫn là <h1> của trang (đọc màn hình, SEO nội bộ), chỉ vẽ ở cỡ
+              headline để không chiếm hai dòng ngay đầu trang. */}
+          <Typography component="h1" variant="h3" sx={{ mb: subtitle === undefined ? 0 : 1 }}>
             {title}
           </Typography>
           {subtitle === undefined ? null : (
-            <Typography sx={{ color: m3('onSurfaceVariant'), maxWidth: '62ch', fontSize: '1.03rem', lineHeight: 1.5 }}>
-              {subtitle}
-            </Typography>
+            <Typography sx={{ color: m3('onSurfaceVariant'), maxWidth: '62ch' }}>{subtitle}</Typography>
           )}
         </Box>
         {actions === undefined ? null : (
@@ -95,7 +78,7 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
       </Stack>
 
       {meta === undefined ? null : (
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 2, mt: 5 }}>
+        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 2, mt: 2.5 }}>
           {meta}
         </Stack>
       )}
