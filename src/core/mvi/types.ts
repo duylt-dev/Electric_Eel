@@ -58,8 +58,23 @@ export interface ViewModelDefinition<S, I, E, D> {
    */
   onError?(error: AppError, intent: I, ctx: IntentContext<S, E>, deps: D): void
 
-  /** Chạy một lần ngay sau khi ViewModel được tạo. Nơi nạp dữ liệu ban đầu. */
-  onStart?(ctx: IntentContext<S, E>, deps: D): void
+  /**
+   * Chạy một lần khi ViewModel khởi động (`start()`). Nơi nạp dữ liệu ban đầu.
+   *
+   * Có thể trả `Promise` — một luồng mở ở đây (logcat, mirror) sống tới khi
+   * bị huỷ, và chỉ huỷ được nếu khai `startKey`.
+   */
+  onStart?(ctx: IntentContext<S, E>, deps: D): void | Promise<void>
+
+  /**
+   * Khoá gộp của job `onStart`, cùng không gian tên với `intentKey`.
+   *
+   * Không có nó thì job khởi động không nằm trong bảng job đang chạy, và intent
+   * "Dừng"/"Đổi tham số" cùng khoá KHÔNG huỷ được luồng mở lúc khởi động: màn
+   * hình báo đã dừng nhưng fetch vẫn chảy, và lượt mở lại nhận 409 vì phiên
+   * cũ còn giữ máy. ViewModel nào mở luồng trong `onStart` phải khai khoá này.
+   */
+  readonly startKey?: string
 }
 
 /** Một ViewModel đã được tạo, gắn với vòng đời của một màn hình. */
@@ -71,6 +86,15 @@ export interface ViewModelInstance<S, I, E> {
   readonly store: StoreApi<S>
   /** Phương thức công khai DUY NHẤT để tác động vào ViewModel. */
   onIntent(intent: I): void
+  /**
+   * Chạy `onStart`. Gọi lần hai (hoặc sau `dispose`) là no-op.
+   *
+   * Tách khỏi lúc dựng để Provider gọi được trong `useEffect` — nơi StrictMode
+   * gỡ/gắn lại có `dispose()` đi kèm. Dựng trong `useState(() => …)` thì
+   * StrictMode gọi initializer hai lần và vứt một kết quả: một ViewModel mồ côi
+   * đã mở luồng mà không ai huỷ được.
+   */
+  start(): void
   /** Gắn người tiêu thụ Effect. Chỉ một. */
   connectEffects(consumer: (effect: E) => void): () => void
   dispose(): void

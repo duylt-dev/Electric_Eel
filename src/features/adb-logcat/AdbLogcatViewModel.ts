@@ -130,6 +130,9 @@ export const AdbLogcatViewModel = defineViewModel<
   // Mở luồng ngay khi màn hình dựng lên. Người ta vào đây để xem log, không
   // phải để bấm một nút bắt đầu.
   onStart: (ctx, deps) => stream(ctx, deps, false),
+  // Luồng mở ở `onStart` phải huỷ được bởi Dừng / Chạy lại — không có khoá này,
+  // "Dừng" chỉ đổi màn hình còn `adb logcat` trên máy chủ vẫn chạy.
+  startKey: STREAM_KEY,
 
   intentKey: (intent) =>
     intent.type === 'StreamRequested' ||

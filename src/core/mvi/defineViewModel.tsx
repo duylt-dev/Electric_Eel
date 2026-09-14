@@ -59,15 +59,23 @@ export function defineViewModel<S, I, E, D = void>(
   }
 
   function Provider({ deps, children }: { deps?: D; children: ReactNode }) {
-    const [instance, setInstance] = useState(() => createViewModel(definition, resolveDeps(deps)))
+    // `autoStart: false`: initializer này bị StrictMode (dev) gọi HAI lần và vứt
+    // một kết quả. Dựng không khởi động thì cái bị vứt chỉ là một store rỗng;
+    // để nó tự `start()` ở đây thì nó đã mở luồng (fetch `/stream`, giữ máy)
+    // mà không ai còn tham chiếu để `dispose()`.
+    const [instance, setInstance] = useState(() =>
+      createViewModel(definition, resolveDeps(deps), { autoStart: false }),
+    )
 
     useEffect(() => {
       // StrictMode ở môi trường dev gắn — gỡ — gắn lại. Lần gỡ đầu đã dispose
       // instance này, nên phải dựng lại cái mới thay vì dùng tiếp cái đã chết.
       if (instance.isDisposed) {
-        setInstance(createViewModel(definition, resolveDeps(deps)))
+        setInstance(createViewModel(definition, resolveDeps(deps), { autoStart: false }))
         return
       }
+      // Khởi động ở đây, nơi có cleanup đi kèm: gỡ là huỷ sạch mọi job.
+      instance.start()
       return () => instance.dispose()
       // `deps` cố tình không nằm trong danh sách: ViewModel gắn với vòng đời
       // màn hình, không dựng lại mỗi khi tham chiếu phụ thuộc đổi.

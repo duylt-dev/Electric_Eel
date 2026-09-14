@@ -17,9 +17,19 @@ import type { IntentContext, ViewModelDefinition, ViewModelInstance } from './ty
  *  3. Job con luôn là con của job gốc. `dispose()` dừng sạch mọi thứ đang chạy,
  *     nên không màn hình nào cần giữ biến job rồi tự gọi huỷ.
  */
+export interface CreateViewModelOptions {
+  /**
+   * Mặc định `true`: gọi `start()` ngay khi dựng — tiện cho test và cho mã
+   * không đi qua React. Provider truyền `false` và tự gọi `start()` trong
+   * effect gắn màn hình (xem `ViewModelInstance.start`).
+   */
+  readonly autoStart?: boolean
+}
+
 export function createViewModel<S, I, E, D>(
   definition: ViewModelDefinition<S, I, E, D>,
   deps: D,
+  options: CreateViewModelOptions = {},
 ): ViewModelInstance<S, I, E> {
   const store = createStore<S>()(() => definition.initialState(deps))
   const effects = new EffectChannel<E>()
@@ -29,6 +39,7 @@ export function createViewModel<S, I, E, D>(
   const running = new Map<string, AbortController>()
 
   let disposed = false
+  let started = false
 
   const makeContext = (signal: AbortSignal): IntentContext<S, E> => ({
     signal,
@@ -48,10 +59,13 @@ export function createViewModel<S, I, E, D>(
   const run = (
     intent: I | null,
     body: (ctx: IntentContext<S, E>) => void | Promise<void>,
+    startKey?: string,
   ): void => {
     if (disposed) return
 
-    const key = intent !== null ? definition.intentKey?.(intent) : undefined
+    // Job `onStart` (intent `null`) nhận khoá từ `startKey` để intent cùng khoá
+    // huỷ được luồng mở lúc khởi động — cùng bảng `running`, không có bảng riêng.
+    const key = intent !== null ? definition.intentKey?.(intent) : startKey
     const own = new AbortController()
 
     if (key !== undefined) {
@@ -114,6 +128,12 @@ export function createViewModel<S, I, E, D>(
     onIntent(intent: I) {
       run(intent, (ctx) => definition.handleIntent(intent, ctx, deps))
     },
+    start() {
+      if (started || disposed) return
+      started = true
+      const onStart = definition.onStart
+      if (onStart) run(null, (ctx) => onStart(ctx, deps), definition.startKey)
+    },
     connectEffects(consumer) {
       return effects.connect(consumer)
     },
@@ -126,10 +146,7 @@ export function createViewModel<S, I, E, D>(
     },
   }
 
-  if (definition.onStart) {
-    const onStart = definition.onStart
-    run(null, (ctx) => onStart(ctx, deps))
-  }
+  if (options.autoStart !== false) instance.start()
 
   return instance
 }
