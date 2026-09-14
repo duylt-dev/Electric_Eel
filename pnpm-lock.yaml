@@ -32,6 +32,21 @@ importers:
       '@prisma/client':
         specifier: ^7.10.0
         version: 7.10.0(prisma@7.10.0(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(better-sqlite3@12.11.1)(magicast@0.5.4)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3))(typescript@6.0.3)
+      '@yume-chan/adb':
+        specifier: ^2.6.4
+        version: 2.6.4
+      '@yume-chan/adb-scrcpy':
+        specifier: ^2.3.2
+        version: 2.3.2
+      '@yume-chan/adb-server-node-tcp':
+        specifier: ^2.5.2
+        version: 2.5.2
+      '@yume-chan/scrcpy':
+        specifier: ^2.3.0
+        version: 2.3.0
+      '@yume-chan/scrcpy-decoder-webcodecs':
+        specifier: ^2.5.3
+        version: 2.5.3
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -1297,6 +1312,39 @@ packages:
 
   '@visx/vendor@4.0.0-alpha.0':
     resolution: {integrity: sha512-6I+MuqXBcv9jnlcVowHoHKSdk9gXTWkHLKyqBwRWg7LY6A3Ei8SHfubpqGV5rBUSppxMq2RszPJUS6w+H0YgmQ==}
+
+  '@yume-chan/adb-scrcpy@2.3.2':
+    resolution: {integrity: sha512-wg45dep+dYy4MAVMtsooPAo/aXKiGbpGHzcQWoHnl4uE4YJKrZK0sK5L++rPNM0WbwlPdSpZ32jMJT+i0u1Mdw==}
+
+  '@yume-chan/adb-server-node-tcp@2.5.2':
+    resolution: {integrity: sha512-ga9icFBRUk1n6lO+ymlj83qE+90kMLV8sQA3w9mZAisfdxxEEIq1cvXitFQJvDgL0NuFQruVI4JoZA/wrgpKOw==}
+
+  '@yume-chan/adb@2.6.4':
+    resolution: {integrity: sha512-aaN21ZOLjWW1nC09C21f0yQkCqxkuMWMqheryGEbmGLPhuzIyOhTurJK8cXh5ZnQ+ptdKBexqvoG6zYoul9XPA==}
+
+  '@yume-chan/async@4.1.3':
+    resolution: {integrity: sha512-0vzhNJMkWUPyjKzUK4rqHEeCU6YQtF78RsB1kFRB6Y2BLupmEQNxcSb0mjKabPL9jZpCCiLa5KL8oTOJClUVaw==}
+
+  '@yume-chan/event@2.0.0':
+    resolution: {integrity: sha512-z56MDOcX1QlgLUCuA6th3r10negVb7A3gzY//TwSC9ZOvzuRlrAqXcxZf1T3hHfNMk/NFO9RIgQgegXYSfaqLw==}
+
+  '@yume-chan/no-data-view@2.0.0':
+    resolution: {integrity: sha512-0GRJrrt6wtZlbiE92jocHOnaAvjQ+Y7xwwhwOPqLkwf90Kj1JIHJ5Zh4wJVQSQIkzfRSOpM+jeEQdC2K15snlA==}
+
+  '@yume-chan/scrcpy-decoder-tinyh264@2.1.0':
+    resolution: {integrity: sha512-Ou2ejwUZEUlwyorqzjzN6Y3YqMZvAmUi2jK9QsPBbQIVDYu/kbql5l5aXJzatgURTmxbf5HvGnOuEDFzJMqGsQ==}
+
+  '@yume-chan/scrcpy-decoder-webcodecs@2.5.3':
+    resolution: {integrity: sha512-iHKKVrEd0JP1x4+MSkKKD6beiwf9wqViGdAzvXTb3BMTYyvJXoihiESaUDVDkesGp2n+mtEKQ237V02wbzkmcw==}
+
+  '@yume-chan/scrcpy@2.3.0':
+    resolution: {integrity: sha512-rpsNvy7H8mf6gVsWYRSkIXmk0wVsP3XOdw3kASokwZkSWtygB2Z1wjoPaEAvaayVCjsz+y/YfG35TOcykEihGw==}
+
+  '@yume-chan/stream-extra@2.6.1':
+    resolution: {integrity: sha512-GQ+Q0SQf9p6Fl7ZK0UO5vHVGBJgkTJm/WXKurUMpjHQV4VUpjZ2hrQ744aCfT7WwSol7Bz/uEiXWmk240Hr/hg==}
+
+  '@yume-chan/struct@2.3.2':
+    resolution: {integrity: sha512-afoCnSKV+5HRK7e4innVd9YTYDyNWdjA1CVQa1j8rWYnmr7HGZfdkHMQr+AESLk6GxWFMzOIPQIG6nYOTGMFIw==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -2912,6 +2960,9 @@ packages:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
+  tinyh264@0.0.7:
+    resolution: {integrity: sha512-etkBRgYkSFBdAi2Cqk4sZgi+xWs/vhzNgvjO3z2i4WILeEmORiNqxuQ4URJatrWQ9LPNV3WPWAtzsh/LA/XL/g==}
+
   to-regex-range@5.0.1:
     resolution: {integrity: sha512-65P7iz6X5yEr1cwcgvQxbbIw7Uk3gOy5dIdtZ4rDveLqhrdJP+Li/Hx6tyK0NEb+2GCyneCMJiGqrADCSNk8sQ==}
     engines: {node: '>=8.0'}
@@ -3040,6 +3091,12 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  yuv-buffer@1.0.1:
+    resolution: {integrity: sha512-1clmBXOyTX2R8OG0vaTFu5yP/C2XG4ULe+2HUu7c/aYE1fWpKvkGEzqMhUjknXp1Ts6Xfrc0YtIBbYxvaau38Q==}
+
+  yuv-canvas@1.3.0:
+    resolution: {integrity: sha512-zwl+lJgy23iTyCCUZbi0IRP+WezeKNeGEFU+a0gmtVRa81zL6mKJVxr+NKzlveJ2okz4aIOUEPrTs6yjuPt+Cg==}
 
   zeptomatch@2.1.0:
     resolution: {integrity: sha512-KiGErG2J0G82LSpniV0CtIzjlJ10E04j02VOudJsPyPwNZgGnRKQy7I1R7GMyg/QswnE4l7ohSGrQbQbjXPPDA==}
@@ -4197,6 +4254,74 @@ snapshots:
       d3-time: 3.1.0
       d3-time-format: 4.1.0
       internmap: 2.0.3
+
+  '@yume-chan/adb-scrcpy@2.3.2':
+    dependencies:
+      '@yume-chan/adb': 2.6.4
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/event': 2.0.0
+      '@yume-chan/scrcpy': 2.3.0
+      '@yume-chan/stream-extra': 2.6.1
+      '@yume-chan/struct': 2.3.2
+
+  '@yume-chan/adb-server-node-tcp@2.5.2':
+    dependencies:
+      '@yume-chan/adb': 2.6.4
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/stream-extra': 2.6.1
+      '@yume-chan/struct': 2.3.2
+
+  '@yume-chan/adb@2.6.4':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/event': 2.0.0
+      '@yume-chan/no-data-view': 2.0.0
+      '@yume-chan/stream-extra': 2.6.1
+      '@yume-chan/struct': 2.3.2
+
+  '@yume-chan/async@4.1.3': {}
+
+  '@yume-chan/event@2.0.0':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+
+  '@yume-chan/no-data-view@2.0.0': {}
+
+  '@yume-chan/scrcpy-decoder-tinyh264@2.1.0':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/event': 2.0.0
+      '@yume-chan/scrcpy': 2.3.0
+      '@yume-chan/stream-extra': 2.6.1
+      tinyh264: 0.0.7
+      yuv-buffer: 1.0.1
+      yuv-canvas: 1.3.0
+
+  '@yume-chan/scrcpy-decoder-webcodecs@2.5.3':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/event': 2.0.0
+      '@yume-chan/no-data-view': 2.0.0
+      '@yume-chan/scrcpy': 2.3.0
+      '@yume-chan/scrcpy-decoder-tinyh264': 2.1.0
+      '@yume-chan/stream-extra': 2.6.1
+
+  '@yume-chan/scrcpy@2.3.0':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/no-data-view': 2.0.0
+      '@yume-chan/stream-extra': 2.6.1
+      '@yume-chan/struct': 2.3.2
+
+  '@yume-chan/stream-extra@2.6.1':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/struct': 2.3.2
+
+  '@yume-chan/struct@2.3.2':
+    dependencies:
+      '@yume-chan/async': 4.1.3
+      '@yume-chan/no-data-view': 2.0.0
 
   acorn-jsx@5.3.2(acorn@8.18.0):
     dependencies:
@@ -6095,6 +6220,8 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
 
+  tinyh264@0.0.7: {}
+
   to-regex-range@5.0.1:
     dependencies:
       is-number: 7.0.0
@@ -6280,6 +6407,10 @@ snapshots:
   yaml@1.10.3: {}
 
   yocto-queue@0.1.0: {}
+
+  yuv-buffer@1.0.1: {}
+
+  yuv-canvas@1.3.0: {}
 
   zeptomatch@2.1.0:
     dependencies:
