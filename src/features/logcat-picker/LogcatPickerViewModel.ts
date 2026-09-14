@@ -1,8 +1,7 @@
 import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
 import { clientContainer } from '@/di/client'
-import { isUsable } from '@/domain/adb/entities/AdbDevice'
-import type { AdbDevice } from '@/domain/adb/entities/AdbDevice'
+import { autoSelectDevice, isUsable } from '@/domain/adb/entities/AdbDevice'
 import { isSafePackageName } from '@/domain/adb/entities/AndroidPackage'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
 import { initialLogcatPickerState } from './LogcatPickerContract'
@@ -24,22 +23,6 @@ export interface LogcatPickerDeps {
 
 type Context = IntentContext<LogcatPickerState, LogcatPickerEffect>
 
-/**
- * Chọn sẵn một máy khi chỉ có đúng một máy dùng được.
- *
- * Gần như lúc nào cũng chỉ có một máy cắm vào, và bắt người ta bấm chọn cái
- * duy nhất trong danh sách là bắt một thao tác không mang thông tin nào. Khi
- * có từ hai máy trở lên thì không đoán: chọn nhầm máy nghĩa là đọc log của một
- * bản build khác, và điều đó rất khó nhận ra.
- */
-function autoSelect(devices: readonly AdbDevice[], current: string | null): string | null {
-  if (current !== null && devices.some((device) => device.serial === current && isUsable(device))) {
-    return current
-  }
-  const usable = devices.filter(isUsable)
-  return usable.length === 1 ? (usable[0]?.serial ?? null) : null
-}
-
 async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boolean): Promise<void> {
   ctx.setState((state) => ({ ...state, status: 'loading', error: null }))
 
@@ -52,7 +35,7 @@ async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boole
   }
 
   const previousSerial = ctx.getState().selectedSerial
-  const nextSerial = autoSelect(devices.value, previousSerial)
+  const nextSerial = autoSelectDevice(devices.value, previousSerial)
   const changed = nextSerial !== previousSerial
 
   ctx.setState((state) => ({
@@ -116,6 +99,8 @@ export const LogcatPickerViewModel = defineViewModel<
   // Hỏi adb ngay khi màn hình dựng lên: danh sách thiết bị là thứ người dùng
   // tới đây để xem, không phải thứ họ phải bấm mới thấy.
   onStart: (ctx, deps) => loadDevices(ctx, deps, false),
+  // Bấm "Làm mới" trong lúc lượt nạp đầu còn bay thì lượt đầu bị huỷ, không chạy đua.
+  startKey: 'adb',
 
   /**
    * Mọi lượt hỏi adb dùng CHUNG một khoá.

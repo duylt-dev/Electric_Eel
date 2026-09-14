@@ -43,6 +43,26 @@ export function deviceLabel(device: AdbDevice): string {
   return device.serial
 }
 
+/**
+ * Chọn sẵn một máy khi chỉ có đúng một máy dùng được.
+ *
+ * Chuyển từ `LogcatPickerViewModel.autoSelect` sang đây (phase 02 của kế
+ * hoạch mirror) để `features/mirror-picker/` dùng lại đúng logic, thay vì mỗi
+ * picker tự viết một bản — hai nơi lệch nhau một dòng thôi là một màn tự chọn
+ * máy còn màn kia thì không, không ai nhận ra tại sao. Giữ NGUYÊN ngữ nghĩa
+ * gốc: gần như lúc nào cũng chỉ có một máy cắm vào, và bắt người ta bấm chọn
+ * cái duy nhất trong danh sách là bắt một thao tác không mang thông tin nào.
+ * Khi có từ hai máy trở lên thì KHÔNG đoán — chọn nhầm máy nghĩa là thao tác
+ * (đọc log, hoặc với mirror là CHẠM/GÕ) nhầm lên một máy khác.
+ */
+export function autoSelectDevice(devices: readonly AdbDevice[], current: string | null): string | null {
+  if (current !== null && devices.some((device) => device.serial === current && isUsable(device))) {
+    return current
+  }
+  const usable = devices.filter(isUsable)
+  return usable.length === 1 ? (usable[0]?.serial ?? null) : null
+}
+
 export function stateLabel(state: AdbDeviceState): string {
   switch (state) {
     case 'device':

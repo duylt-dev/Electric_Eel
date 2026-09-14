@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { deviceLabel, isSafeSerial, parseDevicesOutput } from './AdbDevice'
+import { autoSelectDevice, deviceLabel, isSafeSerial, parseDevicesOutput } from './AdbDevice'
 
 describe('parseDevicesOutput', () => {
   it('đọc serial, trạng thái và model của từng máy', () => {
@@ -75,5 +75,34 @@ describe('deviceLabel', () => {
       deviceLabel({ serial: 'R58M12', state: 'device', model: null, product: null }),
       'R58M12',
     )
+  })
+})
+
+describe('autoSelectDevice', () => {
+  const device = (serial: string, state: 'device' | 'offline' = 'device') => ({
+    serial,
+    state,
+    model: null,
+    product: null,
+  })
+
+  it('không có máy nào dùng được: không tự chọn', () => {
+    assert.equal(autoSelectDevice([device('a', 'offline')], null), null)
+  })
+
+  it('đúng một máy dùng được: tự chọn nó', () => {
+    assert.equal(autoSelectDevice([device('a')], null), 'a')
+  })
+
+  it('từ hai máy dùng được trở lên: không đoán khi chưa chọn gì', () => {
+    assert.equal(autoSelectDevice([device('a'), device('b')], null), null)
+  })
+
+  it('máy đang chọn vẫn còn dùng được: giữ nguyên, không đoán lại', () => {
+    assert.equal(autoSelectDevice([device('a'), device('b')], 'b'), 'b')
+  })
+
+  it('máy đang chọn hết dùng được nhưng còn đúng một máy khác: chuyển sang máy đó', () => {
+    assert.equal(autoSelectDevice([device('a'), device('b', 'offline')], 'b'), 'a')
   })
 })

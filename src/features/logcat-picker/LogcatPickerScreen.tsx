@@ -19,8 +19,8 @@ import { m3 } from '@/ui/theme/m3Tokens'
 import { LogcatPickerViewModel } from './LogcatPickerViewModel'
 import { selectedDevice, usableDevices } from './LogcatPickerContract'
 import type { LogcatPickerEffect } from './LogcatPickerContract'
+import { DeviceList } from '@/features/adb-common/components/DeviceList'
 import { AppList } from './components/AppList'
-import { DeviceList } from './components/DeviceList'
 
 /** Một app trong danh bạ của tool. Chỉ ba trường màn này cần. */
 export interface DirectoryApp {
