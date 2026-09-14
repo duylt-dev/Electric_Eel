@@ -46,7 +46,9 @@ const layerBoundaries = [
   {
     // ViewModel không được chạm vào React hay MUI — đúng luật "no Compose import
     // inside a ViewModel". State đi ra qua hook, không qua import ngược.
-    files: ['src/features/**/*ViewModel.ts'],
+    // Áp cho MỌI `.ts` trong features/ (Contract, ViewModel, và các file tách ra
+    // từ ViewModel như `device-mirror/mirrorStream.ts`) — chỉ `.tsx` mới là UI.
+    files: ['src/features/**/*.ts'],
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [
@@ -78,6 +80,24 @@ const layerBoundaries = [
         patterns: [
           { group: ['@/features/*', '@/domain/*', '@/data/*'],
             message: 'ui/ dùng chung cho mọi tool trong supertool, nên không được gắn với nghiệp vụ của một tool.' },
+        ],
+      }],
+    },
+  },
+  {
+    // Thư viện scrcpy/adb (Tango, `@yume-chan/*`) là HIỆN THỰC của cổng
+    // `MirrorDeviceGateway` — chỉ được đứng trong data/, đúng mẫu Prisma/
+    // Firebase đã áp cho mọi nguồn dữ liệu khác của dự án (xem LLM.md §5).
+    // Domain/feature/ui/app gọi qua cổng ở domain/device-mirror/repositories,
+    // không bao giờ import thẳng — import thẳng nghĩa là tầng trên biết cả
+    // Consumable/ReadableStream gốc của Tango, và đổi thư viện scrcpy sau này
+    // phải sửa lại mọi nơi thay vì chỉ một adapter.
+    files: ['src/core/**', 'src/domain/**', 'src/features/**', 'src/ui/**', 'src/app/**'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['@yume-chan/*'],
+            message: 'Thư viện scrcpy/adb là HIỆN THỰC của cổng, chỉ được import trong data/. Đưa qua cổng ở domain/device-mirror/repositories.' },
         ],
       }],
     },
