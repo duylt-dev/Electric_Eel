@@ -29,13 +29,8 @@ if (serial === undefined || serial.startsWith('--')) {
   process.exit(1)
 }
 
-const request: MirrorRequest = {
-  serial,
-  maxSize: 1440,
-  maxFps: 60,
-  bitRateMbps: 8,
-  control: true,
-}
+// Chất lượng không nằm trong request nữa — gateway đọc `MIRROR_QUALITY`.
+const request: MirrorRequest = { serial, control: true }
 
 async function main(): Promise<void> {
   const shell = new ProcessAdbShell()

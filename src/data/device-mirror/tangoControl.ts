@@ -79,6 +79,11 @@ async function sendOne(
       // scrcpy `injectText` chỉ hiểu ASCII. Chữ có dấu đi đường dán clipboard
       // MỘT CHIỀU host→máy (quyết định #4, plan.md) — không phải đồng bộ hai
       // chiều, `sequence: 0n` vì không cần theo dõi ACK của lượt dán này.
+      //
+      // Máy KHÔNG cho scrcpy đặt clipboard thì lệnh này im lặng (scrcpy-server
+      // 3.3.4 trả `false` không log khi `getService("clipboard")` là null —
+      // đo trên SM-A165F / Android 16, xem `LLM.md` §11). Ở đây không biết
+      // được để báo; ô gõ chữ nói trước điều này với người dùng.
       if (isAsciiText(message.text)) {
         await writer.injectText(message.text)
         return

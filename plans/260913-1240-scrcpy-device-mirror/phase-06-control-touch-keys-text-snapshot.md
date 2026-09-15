@@ -1,6 +1,6 @@
 # Phase 06 — Điều khiển: chạm/cuộn/phím/gõ chữ/xoay/màn hình/chụp PNG
 
-**Ước lượng:** 8h · **Ưu tiên:** P2 (bỏ hẳn nếu chọn "chỉ xem") · **Trạng thái:** pending
+**Ước lượng:** 8h · **Ưu tiên:** P2 (bỏ hẳn nếu chọn "chỉ xem") · **Trạng thái:** done (2026-09-15) — kết quả kiểm tay và trễ ở `reports/control-latency.md`; chữ có dấu KHÔNG vào được trên SM-A165F, ghi `LLM.md` §11 #13
 **File ownership:** `src/features/device-mirror/components/{MirrorSurface,MirrorControls,TextInjector}.tsx`, `src/features/device-mirror/DeviceMirrorViewModel.ts` + `.test.ts` (nhánh control), `src/features/device-mirror/pointerToTouch.ts` + test, `src/data/device-mirror/tangoControl.ts` (chỉnh theo thực tế), `src/app/api/adb/mirror/control/route.ts` (chỉnh).
 **Phụ thuộc:** 03 (route control), 04 (`sendControl`), 05 (Screen/VM).
 
@@ -62,13 +62,13 @@ Xoá: không.
 
 ## Todo List
 
-- [ ] `pointerToTouch` + test
-- [ ] `MirrorSurface` pointer/wheel/context menu, `touch-action: none`
-- [ ] `MirrorControls`, `TextInjector`
-- [ ] VM nhánh control + test
-- [ ] Kịch bản tay đủ 10 mục ở bước 5
-- [ ] `reports/control-latency.md` + quyết định dự phòng
-- [ ] typecheck/test/lint xanh
+- [x] `pointerToTouch` + test
+- [x] `MirrorSurface` pointer/wheel/context menu, `touch-action: none` (hook `useMirrorPointer`)
+- [x] `MirrorControls`, `TextInjector` (gom cùng Surface vào `MirrorStage` dùng chung Screen/Panel)
+- [x] VM nhánh control (`mirrorControl.ts`) + test
+- [x] Kịch bản tay — 9/10 đạt; chữ có dấu hỏng do máy (xem report)
+- [x] `reports/control-latency.md` — p95 20 ms, giữ POST
+- [x] typecheck/test/lint xanh
 
 ## Success Criteria
 

@@ -15,7 +15,7 @@ import { HttpMirrorRepository } from './HttpMirrorRepository'
  * chỉ test PHẢN ỨNG của repository khi `signal` đã/đang huỷ.
  */
 
-const REQUEST: MirrorRequest = { serial: 'RF8Y60B9NCZ', maxSize: 1440, maxFps: 60, bitRateMbps: 8, control: true }
+const REQUEST: MirrorRequest = { serial: 'RF8Y60B9NCZ', control: true }
 
 function concatBytes(chunks: readonly Uint8Array[]): Uint8Array {
   const total = chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)
@@ -246,5 +246,32 @@ describe('HttpMirrorRepository.sendControl', () => {
 
     assert.equal(result.ok, false)
     if (!result.ok) assert.equal(result.error.kind, 'cancelled')
+  })
+})
+
+describe('HttpMirrorRepository — fetch mặc định', () => {
+  // Node (undici) không kiểm `this` của `fetch`, trình duyệt thì có: gọi
+  // `window.fetch` với `this` là một object thường → `TypeError: Illegal
+  // invocation`. Test này ghi lại `this` mà `fetch` toàn cục nhận được để
+  // bắt đúng lỗi đó mà không cần trình duyệt. Thay `globalThis.fetch` chỉ
+  // trong một test và trả lại ở `finally`; mỗi file test chạy trong tiến
+  // trình riêng nên không đụng file khác.
+  it('gọi fetch toàn cục với this là globalThis, không phải repository', async () => {
+    const original = globalThis.fetch
+    let receiver: unknown = null
+    globalThis.fetch = async function (this: unknown) {
+      receiver = this
+      return new Response(streamOf([]), { status: 200 })
+    }
+    try {
+      const repo = new HttpMirrorRepository()
+      const result = await repo.stream(REQUEST, () => {}, new AbortController().signal)
+
+      assert.equal(result.ok, true)
+      assert.notEqual(receiver, repo)
+      assert.equal(receiver, globalThis)
+    } finally {
+      globalThis.fetch = original
+    }
   })
 })

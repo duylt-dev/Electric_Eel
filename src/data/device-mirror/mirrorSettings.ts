@@ -4,7 +4,7 @@ import { AppErrors, type Result, err, ok } from '../../core/result'
 import { isAdbEnabled } from '../adb/adbSettings'
 
 /**
- * Cấu hình của công cụ Màn hình máy (mirror).
+ * Cấu hình của ô Phản chiếu (mirror) trong Logcat.
  *
  * Dùng chung cờ `ADB_ENABLED` với công cụ Logcat — cùng lý do: cả hai chỉ hữu
  * ích khi adb ở máy chủ nhìn thấy thiết bị thật, và cùng mặc định an toàn (bật
@@ -57,7 +57,7 @@ export function readMirrorSettings(
   if (!isAdbEnabled(env)) {
     return err(
       AppErrors.forbidden(
-        'Công cụ Màn hình máy đang tắt trên máy chủ này. Đặt ADB_ENABLED=true nếu adb ở đây thật sự nhìn thấy thiết bị của bạn.',
+        'Phản chiếu màn hình đang tắt trên máy chủ này. Đặt ADB_ENABLED=true nếu adb ở đây thật sự nhìn thấy thiết bị của bạn.',
       ),
     )
   }

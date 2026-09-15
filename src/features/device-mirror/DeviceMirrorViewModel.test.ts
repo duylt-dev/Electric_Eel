@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import { createViewModel } from '@/core/mvi/createViewModel'
 import { type AppError, AppErrors, type Result, err, ok } from '@/core/result'
+import type { MirrorControlMessage } from '@/domain/device-mirror/entities/MirrorControlMessage'
 import type { MirrorRequest } from '@/domain/device-mirror/entities/MirrorRequest'
 import type { MirrorStreamEvent } from '@/domain/device-mirror/entities/MirrorStreamEvent'
 import type { MirrorVideoPacket } from '@/domain/device-mirror/entities/MirrorVideoPacket'
@@ -66,8 +67,14 @@ class FakeMirrorRepository implements MirrorRepository {
     return script.outcome
   }
 
-  sendControl(): Promise<Result<void>> {
-    return Promise.resolve(ok(undefined))
+  /** Mọi thông điệp điều khiển đã nhận, theo thứ tự — kèm sessionId để khẳng định gửi đúng phiên. */
+  readonly controls: Array<{ sessionId: string; message: MirrorControlMessage }> = []
+  /** Kết quả trả cho `sendControl` — đổi để mô phỏng socket điều khiển đứt. */
+  controlOutcome: Result<void> = ok(undefined)
+
+  sendControl(sessionId: string, message: MirrorControlMessage): Promise<Result<void>> {
+    this.controls.push({ sessionId, message })
+    return Promise.resolve(this.controlOutcome)
   }
 }
 
@@ -91,8 +98,10 @@ class FakeVideoSink implements MirrorVideoSink {
     for (const listener of this.errorListeners) listener(error)
   }
 
+  snapshotOutcome: Result<Uint8Array> = ok(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))
+
   snapshotPng(): Promise<Result<Uint8Array>> {
-    return Promise.resolve(ok(new Uint8Array()))
+    return Promise.resolve(this.snapshotOutcome)
   }
 
   dispose(): void {}
@@ -247,62 +256,23 @@ describe('DeviceMirrorViewModel', () => {
     assert.equal(repo.requests.length, 1)
   })
 
-  it('QualityChanged lúc đang chảy → huỷ luồng cũ, mở lại với quality mới', async () => {
-    const repo = new FakeMirrorRepository([
-      { events: [META], outcome: 'pending' },
-      { events: [META], outcome: 'pending' },
-    ])
-    const { vm } = makeViewModel(repo)
-    await settle()
-
-    vm.onIntent({ type: 'QualityChanged', quality: { maxSize: 0, maxFps: 30, bitRateMbps: 2 } })
-    await settle()
-
-    assert.equal(repo.signals[0]?.aborted, true)
-    assert.equal(repo.requests.length, 2)
-    assert.deepEqual(
-      [repo.requests[1]?.maxSize, repo.requests[1]?.maxFps, repo.requests[1]?.bitRateMbps],
-      [0, 30, 2],
-    )
-    assert.equal(vm.store.getState().status, 'streaming')
-  })
-
-  it('QualityChanged lúc đã dừng → chỉ ghi nhớ, KHÔNG tự mở luồng', async () => {
-    const repo = new FakeMirrorRepository([{ events: [META], outcome: 'pending' }])
-    const { vm } = makeViewModel(repo)
-    await settle()
-    vm.onIntent({ type: 'StreamStopped' })
-    await settle()
-
-    vm.onIntent({ type: 'QualityChanged', quality: { maxSize: 1024, maxFps: 30, bitRateMbps: 2 } })
-    await settle()
-
-    assert.equal(repo.requests.length, 1)
-    assert.equal(vm.store.getState().status, 'stopped')
-    assert.equal(vm.store.getState().quality.maxSize, 1024)
-
-    // "Chạy lại" dùng đúng tham số đã ghi nhớ.
-    vm.onIntent({ type: 'StreamRequested' })
-    await settle()
-    assert.equal(repo.requests[1]?.maxSize, 1024)
-  })
-
   it('ControlToggled lúc đang chảy → nối lại với control mới; lúc đã dừng → không', async () => {
     const repo = new FakeMirrorRepository([{ events: [META], outcome: 'pending' }])
     const { vm } = makeViewModel(repo)
     await settle()
 
-    vm.onIntent({ type: 'ControlToggled', enabled: true })
+    // Mặc định BẬT điều khiển — lượt mở đầu tiên đã mang `control: true`.
+    vm.onIntent({ type: 'ControlToggled', enabled: false })
     await settle()
     assert.equal(repo.signals[0]?.aborted, true)
-    assert.deepEqual(repo.requests.map((request) => request.control), [false, true])
+    assert.deepEqual(repo.requests.map((request) => request.control), [true, false])
 
     vm.onIntent({ type: 'StreamStopped' })
     await settle()
-    vm.onIntent({ type: 'ControlToggled', enabled: false })
+    vm.onIntent({ type: 'ControlToggled', enabled: true })
     await settle()
     assert.equal(repo.requests.length, 2)
-    assert.equal(vm.store.getState().controlEnabled, false)
+    assert.equal(vm.store.getState().controlEnabled, true)
   })
 
   it('decoder hỏng giữa phiên (sink.onError) → failed + ShowMessage + huỷ luồng', async () => {
@@ -318,9 +288,138 @@ describe('DeviceMirrorViewModel', () => {
     assert.equal(state.error?.message, 'Trình duyệt không giải mã được luồng video.')
     assert.equal(repo.signals[0]?.aborted, true)
     assert.ok(effects.some((effect) => effect.type === 'ShowMessage' && effect.severity === 'error'))
-    // Đổi chất lượng lúc đã hỏng không tự mở lại — người dùng bấm "Chạy lại".
-    vm.onIntent({ type: 'QualityChanged', quality: { maxSize: 1024, maxFps: 30, bitRateMbps: 2 } })
+    // Đổi cờ điều khiển lúc đã hỏng không tự mở lại — người dùng bấm "Chạy lại".
+    vm.onIntent({ type: 'ControlToggled', enabled: false })
     await settle()
     assert.equal(repo.requests.length, 1)
+  })
+
+  // ─── Điều khiển ───
+
+  const streamingRepo = () => new FakeMirrorRepository([{ events: [META], outcome: 'pending' }])
+
+  it('kéo down→move→up ra ba thông điệp touch đúng thứ tự, up có pressure 0, đúng sessionId', async () => {
+    const repo = streamingRepo()
+    const { vm } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'TouchInput', action: 'down', pointer: 0, nx: 0.5, ny: 0.5, pressure: 1 })
+    vm.onIntent({ type: 'TouchInput', action: 'move', pointer: 0, nx: 0.5, ny: 0.3, pressure: 1 })
+    vm.onIntent({ type: 'TouchInput', action: 'up', pointer: 0, nx: 0.5, ny: 0.2, pressure: 1 })
+    await settle()
+
+    assert.deepEqual(
+      repo.controls.map((entry) => [entry.sessionId, entry.message.type, (entry.message as { action?: string }).action]),
+      [
+        ['s1', 'touch', 'down'],
+        ['s1', 'touch', 'move'],
+        ['s1', 'touch', 'up'],
+      ],
+    )
+    const up = repo.controls[2]?.message
+    assert.equal(up?.type === 'touch' ? up.pressure : -1, 0)
+  })
+
+  it('chưa streaming hoặc đã tắt điều khiển → không gửi gì', async () => {
+    const repo = new FakeMirrorRepository([{ events: [], outcome: 'pending' }])
+    const { vm } = makeViewModel(repo)
+    await settle()
+    vm.onIntent({ type: 'TouchInput', action: 'down', pointer: 0, nx: 0.5, ny: 0.5, pressure: 1 })
+    vm.onIntent({ type: 'KeyTapped', key: 'back' })
+    await settle()
+    assert.equal(repo.controls.length, 0)
+
+    const repo2 = new FakeMirrorRepository([{ events: [META], outcome: 'pending' }, { events: [META], outcome: 'pending' }])
+    const { vm: vm2 } = makeViewModel(repo2)
+    await settle()
+    vm2.onIntent({ type: 'ControlToggled', enabled: false })
+    await settle()
+    vm2.onIntent({ type: 'KeyTapped', key: 'home' })
+    await settle()
+    assert.equal(repo2.controls.length, 0)
+  })
+
+  it('KeyTapped → key down rồi key up; ScrollInput → một thông điệp scroll', async () => {
+    const repo = streamingRepo()
+    const { vm } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'KeyTapped', key: 'back' })
+    await settle()
+    vm.onIntent({ type: 'ScrollInput', nx: 0.5, ny: 0.5, dx: 0, dy: -1 })
+    await settle()
+
+    assert.deepEqual(repo.controls.map((entry) => entry.message), [
+      { type: 'key', action: 'down', key: 'back' },
+      { type: 'key', action: 'up', key: 'back' },
+      { type: 'scroll', nx: 0.5, ny: 0.5, dx: 0, dy: -1 },
+    ])
+  })
+
+  it('TextSubmitted rỗng không gọi; có chữ thì gửi nguyên văn (có dấu cũng vậy)', async () => {
+    const repo = streamingRepo()
+    const { vm } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'TextSubmitted', text: '' })
+    await settle()
+    assert.equal(repo.controls.length, 0)
+
+    vm.onIntent({ type: 'TextSubmitted', text: 'xin chào' })
+    await settle()
+    assert.deepEqual(repo.controls[0]?.message, { type: 'text', text: 'xin chào' })
+  })
+
+  it('DisplayPowerToggled đảo displayOn CHỈ khi gửi thành công', async () => {
+    const repo = streamingRepo()
+    const { vm, effects } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'DisplayPowerToggled' })
+    await settle()
+    assert.deepEqual(repo.controls[0]?.message, { type: 'displayPower', on: false })
+    assert.equal(vm.store.getState().displayOn, false)
+
+    repo.controlOutcome = err(AppErrors.upstream('Socket điều khiển đã đứt.'))
+    vm.onIntent({ type: 'DisplayPowerToggled' })
+    await settle()
+    assert.equal(vm.store.getState().displayOn, false)
+    // Lỗi gửi → báo, nhưng KHÔNG đổi status: luồng video mới là thứ biết phiên còn sống hay không.
+    assert.equal(vm.store.getState().status, 'streaming')
+    assert.ok(effects.some((effect) => effect.type === 'ShowMessage' && effect.message === 'Socket điều khiển đã đứt.'))
+  })
+
+  it('RotateRequested / NotificationsRequested → đúng loại thông điệp', async () => {
+    const repo = streamingRepo()
+    const { vm } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'RotateRequested' })
+    vm.onIntent({ type: 'NotificationsRequested' })
+    await settle()
+    assert.deepEqual(
+      repo.controls.map((entry) => entry.message.type),
+      ['rotate', 'expandNotifications'],
+    )
+  })
+
+  it('SnapshotRequested → DownloadFile PNG từ sink; sink lỗi → ShowMessage', async () => {
+    const repo = streamingRepo()
+    const { vm, effects, sink } = makeViewModel(repo)
+    await settle()
+
+    vm.onIntent({ type: 'SnapshotRequested' })
+    await settle()
+    const download = effects.find((effect) => effect.type === 'DownloadFile')
+    assert.ok(download !== undefined && download.type === 'DownloadFile')
+    assert.equal(download.mimeType, 'image/png')
+    assert.match(download.fileName, /^mirror-RF8Y60B9NCZ-\d{8}-\d{4}\.png$/)
+    // Chụp không đi qua máy — không có thông điệp điều khiển nào.
+    assert.equal(repo.controls.length, 0)
+
+    sink.snapshotOutcome = err(AppErrors.validation('Chưa có khung hình nào để chụp.'))
+    vm.onIntent({ type: 'SnapshotRequested' })
+    await settle()
+    assert.ok(effects.some((effect) => effect.type === 'ShowMessage' && effect.message === 'Chưa có khung hình nào để chụp.'))
   })
 })

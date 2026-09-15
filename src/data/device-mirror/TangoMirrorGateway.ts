@@ -7,6 +7,7 @@ import { DefaultServerPath, ScrcpyInstanceId } from '@yume-chan/scrcpy'
 
 import { AppErrors, type Result, err, ok } from '../../core/result'
 import type { AdbShell } from '../../domain/adb/repositories/AdbShell'
+import { MIRROR_QUALITY } from '../../domain/device-mirror/entities/MirrorRequest'
 import type { MirrorRequest } from '../../domain/device-mirror/entities/MirrorRequest'
 import type {
   MirrorDeviceGateway,
@@ -120,9 +121,10 @@ export class TangoMirrorGateway implements MirrorDeviceGateway {
           control: request.control,
           tunnelForward: true,
           videoCodec: 'h264',
-          maxSize: request.maxSize,
-          maxFps: request.maxFps,
-          videoBitRate: request.bitRateMbps * 1_000_000,
+          // Chất lượng cố định ở mức cao nhất — xem `MIRROR_QUALITY`.
+          maxSize: MIRROR_QUALITY.maxSize,
+          maxFps: MIRROR_QUALITY.maxFps,
+          videoBitRate: MIRROR_QUALITY.bitRateMbps * 1_000_000,
           clipboardAutosync: false,
           scid: ScrcpyInstanceId.random(),
           // 'debug' để bắt dòng "Using video encoder". KHÔNG 'verbose' — làm

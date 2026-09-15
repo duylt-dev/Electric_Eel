@@ -2,7 +2,6 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
 import HistoryIcon from '@mui/icons-material/History'
 import TerminalIcon from '@mui/icons-material/Terminal'
 import InsightsIcon from '@mui/icons-material/Insights'
-import ScreenshotMonitorIcon from '@mui/icons-material/ScreenshotMonitor'
 import TranslateIcon from '@mui/icons-material/Translate'
 import TuneIcon from '@mui/icons-material/Tune'
 import type { SvgIconComponent } from '@mui/icons-material'
@@ -112,15 +111,6 @@ export const TOOLS: readonly ToolDefinition[] = [
     description: 'Chọn máy, chọn app, xem log của riêng app đó — không lẫn log máy.',
     href: '/logcat',
     icon: TerminalIcon,
-    status: 'available',
-    audiences: ['product'],
-  },
-  {
-    id: 'mirror',
-    label: 'Màn hình máy',
-    description: 'Xem và điều khiển màn hình thiết bị Android đang cắm, ngay trong trình duyệt.',
-    href: '/mirror',
-    icon: ScreenshotMonitorIcon,
     status: 'available',
     audiences: ['product'],
   },

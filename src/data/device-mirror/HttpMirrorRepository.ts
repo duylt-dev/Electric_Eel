@@ -29,10 +29,21 @@ export class HttpMirrorRepository implements MirrorRepository {
     this.postControlBatch(sessionId, messages),
   )
 
-  /** `fetchImpl` tiêm được để test không cần trình duyệt thật: `stream()` tự
-   *  đọc `response.body` theo từng mẩu, không qua `httpJson` (nó chờ JSON
-   *  xong hẳn mới đọc — không hợp với luồng nhị phân chảy dần). */
-  constructor(private readonly fetchImpl: typeof fetch = globalThis.fetch) {}
+  /**
+   * `fetchImpl` tiêm được để test không cần trình duyệt thật: `stream()` tự
+   * đọc `response.body` theo từng mẩu, không qua `httpJson` (nó chờ JSON xong
+   * hẳn mới đọc — không hợp với luồng nhị phân chảy dần).
+   *
+   * Mặc định là một hàm BỌC, không phải `globalThis.fetch` trần. Gán `fetch`
+   * vào thuộc tính rồi gọi `this.fetchImpl(...)` là gọi `fetch` với `this` là
+   * repository — trình duyệt ném `TypeError: Illegal invocation` trước khi có
+   * request nào rời máy, và `catch` bên dưới dịch nó thành "Không kết nối được
+   * tới máy chủ." dù máy chủ vẫn sống. Node (undici) không kiểm `this` nên
+   * test chạy qua; chỉ trình duyệt thật mới lộ.
+   */
+  constructor(
+    private readonly fetchImpl: typeof fetch = (input, init) => globalThis.fetch(input, init),
+  ) {}
 
   async stream(
     request: MirrorRequest,

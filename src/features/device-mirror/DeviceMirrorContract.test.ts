@@ -5,7 +5,6 @@ import {
   canControl,
   initialDeviceMirrorState,
   knownFrameSize,
-  qualityLabel,
   snapshotFileName,
 } from './DeviceMirrorContract'
 
@@ -55,15 +54,5 @@ describe('canControl', () => {
 
   it('chưa streaming (ví dụ đang connecting) thì không cho dù các cờ khác đã bật', () => {
     assert.equal(canControl({ ...streaming, status: 'connecting' }), false)
-  })
-})
-
-describe('qualityLabel', () => {
-  it('maxSize 0 hiện "Gốc" thay vì "0p"', () => {
-    assert.equal(qualityLabel({ maxSize: 0, maxFps: 60, bitRateMbps: 8 }), 'Gốc · 60fps · 8Mbps')
-  })
-
-  it('maxSize khác 0 hiện <n>p', () => {
-    assert.equal(qualityLabel({ maxSize: 1440, maxFps: 30, bitRateMbps: 4 }), '1440p · 30fps · 4Mbps')
   })
 })

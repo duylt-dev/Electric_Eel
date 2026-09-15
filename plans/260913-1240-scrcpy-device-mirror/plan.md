@@ -38,7 +38,7 @@ created: 2026-09-13
 | [03](phase-03-server-adapter-session-registry-routes.md) | Data server: Tango gateway, settings, quy lỗi, `di/server`, hai Route Handler | 8 | done (máy thật 14/09) |
 | [04](phase-04-browser-adapter-decoder-canvas.md) | Data trình duyệt: HTTP repo + frame reader, WebCodecs sink, `di/client` | 5 | done |
 | [05](phase-05-feature-mvi-ui-routes-registry.md) | Feature MVI + Screen + picker + `adb-common` + route + `toolRegistry` | 9 | done — review xong, đã sửa (`reports/review-fixes-phase-03-05.md`); chờ kiểm UI tay |
-| [06](phase-06-control-touch-keys-text-snapshot.md) | Điều khiển: chạm/cuộn/phím/gõ chữ/xoay/màn hình/chụp PNG | 8 | pending |
+| [06](phase-06-control-touch-keys-text-snapshot.md) | Điều khiển: chạm/cuộn/phím/gõ chữ/xoay/màn hình/chụp PNG | 8 | done — kiểm trên SM-A165F, p95 20 ms (`reports/control-latency.md`); chữ có dấu bị máy chặn (`LLM.md` §11 #13) |
 | [07](phase-07-hardening-csp-flags-docs.md) | Hardening: CSP thực tế, lỗi, dọn phiên, `.env.example`, `LLM.md`, `architecture.md`, kịch bản tay | 5 | pending |
 
 Phụ thuộc: 01 → 02 → {03 ∥ 04 ∥ 05(VM bằng fake)} → 06 → 07. GitNexus index cũ (01/09) và query degraded → mỗi phase chạm symbol cũ phải `analyze --index-only` rồi `impact`, nếu vẫn `UNKNOWN`/degraded thì xác nhận bằng grep và ghi vào báo cáo.
@@ -59,6 +59,8 @@ Phụ thuộc: 01 → 02 → {03 ∥ 04 ∥ 05(VM bằng fake)} → 06 → 07. G
 
 1. Phạm vi **đầy đủ** hay **chỉ xem**? — mặc định: đầy đủ.
 2. Nhãn menu `Màn hình máy` (mô tả: "Xem và điều khiển màn hình thiết bị Android đang cắm, ngay trong trình duyệt") — mặc định: dùng nhãn này.
+   - **Đã đổi 2026-09-15:** bỏ công cụ riêng `Màn hình máy` (mục menu, `/mirror`, `/mirror/[serial]`, `features/mirror-picker`, `DeviceMirrorScreen`). Mirror chỉ còn là ô "Phản chiếu" trong Logcat.
 3. Chụp màn hình lấy từ canvas (độ phân giải = luồng video, tức thì) hay `adb exec-out screencap -p` (độ phân giải gốc, thêm một route) — mặc định: canvas; screencap để sau.
 4. Gõ chữ có dấu: dùng `setClipboard(paste=true)` một chiều host→máy (scrcpy `injectText` chỉ ASCII) — mặc định: có, và ghi rõ đây không phải đồng bộ clipboard hai chiều.
 5. Chất lượng mặc định `maxSize=1440, 60fps, 8Mbps` với ba mức chọn — mặc định: giữ.
+   - **Đã đổi 2026-09-15:** bỏ ô chọn. Cố định mức cao nhất `MIRROR_QUALITY = { maxSize: 0 (gốc), maxFps: 0 (không chặn), 12 Mbps }`; trình duyệt không gửi, máy chủ không nhận tham số chất lượng nữa.

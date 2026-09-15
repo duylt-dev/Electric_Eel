@@ -7,7 +7,7 @@ import { MirrorSessionRegistry } from '../MirrorSessionRegistry'
 import type { MirrorDeviceGateway, MirrorDeviceSession } from '../repositories/MirrorDeviceGateway'
 import { startMirrorSession } from './startMirrorSession'
 
-const request: MirrorRequest = { serial: 'emulator-5554', maxSize: 1440, maxFps: 60, bitRateMbps: 8, control: true }
+const request: MirrorRequest = { serial: 'emulator-5554', control: true }
 
 function fakeSession(closed: { value: boolean }): MirrorDeviceSession {
   return {

@@ -20,7 +20,7 @@ export interface DeviceMirrorDeps {
 type Context = IntentContext<DeviceMirrorState, DeviceMirrorEffect>
 
 export async function stream(ctx: Context, deps: DeviceMirrorDeps): Promise<void> {
-  const { quality, controlEnabled } = ctx.getState()
+  const { controlEnabled } = ctx.getState()
   // `sessionId`/`frameSize` là của phiên cũ — xoá để MetaChip không hiện kích
   // cỡ lượt trước trong lúc "đang nối", và `canControl` không gửi lệnh vào
   // một phiên đã chết.
@@ -42,13 +42,8 @@ export async function stream(ctx: Context, deps: DeviceMirrorDeps): Promise<void
   let outcome
   try {
     outcome = await deps.mirror.stream(
-      {
-        serial: deps.serial,
-        maxSize: quality.maxSize,
-        maxFps: quality.maxFps,
-        bitRateMbps: quality.bitRateMbps,
-        control: controlEnabled,
-      },
+      // Chất lượng không đi qua đây: máy chủ cố định ở `MIRROR_QUALITY`.
+      { serial: deps.serial, control: controlEnabled },
       (event) => handleEvent(event, ctx, deps, signal),
       signal,
     )
