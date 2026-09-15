@@ -68,6 +68,11 @@ export default async function AdbLogcatPage({ params, searchParams }: PageProps)
     ? (apps.value.find((app) => app.packageName === packageName)?.displayName ?? null)
     : null
 
+  // Không chặn trang khi máy chủ thiếu scrcpy-server: xem log vẫn phải chạy
+  // được; chỉ có nút "Phản chiếu" là không hiện. Lý do thiếu nằm trong lỗi của
+  // `readMirrorSettings` — không nhắc ở đây để cảnh báo không nằm cạnh mọi lượt xem log.
+  const mirrorAvailable = serverContainer.deviceMirror.settings().ok
+
   return (
     // `key` buộc dựng lại ViewModel khi đổi app hoặc đổi máy: đệm log của lượt
     // trước không còn nghĩa gì, và một luồng cũ còn chảy vào màn hình mới là
@@ -77,6 +82,7 @@ export default async function AdbLogcatPage({ params, searchParams }: PageProps)
       serial={serial}
       packageName={packageName}
       appName={appName}
+      mirrorAvailable={mirrorAvailable}
     />
   )
 }

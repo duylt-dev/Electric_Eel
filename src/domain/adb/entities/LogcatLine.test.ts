@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { formatLogcatLine, parseLogcatLine } from './LogcatLine'
+import { parseLogcatLine } from './LogcatLine'
 
 describe('parseLogcatLine', () => {
   it('tách được một dòng threadtime đầy đủ', () => {
@@ -42,20 +42,5 @@ describe('parseLogcatLine', () => {
 
   it('quy mức S về V để không sinh thêm một nhánh không ai vẽ', () => {
     assert.equal(parseLogcatLine('09-02 21:33:12.345  1  1 S T: x', 0)?.level, 'V')
-  })
-})
-
-describe('formatLogcatLine', () => {
-  it('dựng lại được dòng để ghi ra tệp', () => {
-    const raw = '09-02 21:33:12.345  1234  1300 D OkHttp: hello'
-    const line = parseLogcatLine(raw, 0)
-    assert.ok(line !== null)
-    assert.equal(formatLogcatLine(line), raw)
-  })
-
-  it('dòng không phân tích được thì xuất nguyên văn', () => {
-    const line = parseLogcatLine('\tat Foo.bar()', 0)
-    assert.ok(line !== null)
-    assert.equal(formatLogcatLine(line), '\tat Foo.bar()')
   })
 })

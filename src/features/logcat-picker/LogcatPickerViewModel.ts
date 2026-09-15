@@ -23,6 +23,15 @@ export interface LogcatPickerDeps {
 
 type Context = IntentContext<LogcatPickerState, LogcatPickerEffect>
 
+/** Máy đổi thì danh sách app lẫn nhãn của máy cũ đều bỏ — nhãn theo APK, không theo tên. */
+const EMPTY_PACKAGES = {
+  packageNames: [] as readonly string[],
+  packagesStatus: 'idle' as const,
+  deviceLabels: {} as Readonly<Record<string, string>>,
+  labelsStatus: 'idle' as const,
+  labelsMessage: null,
+}
+
 async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boolean): Promise<void> {
   ctx.setState((state) => ({ ...state, status: 'loading', error: null }))
 
@@ -45,7 +54,7 @@ async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boole
     selectedSerial: nextSerial,
     // Máy đã đổi thì danh sách app cũ không còn đúng nữa. Giữ lại nó sẽ khiến
     // người dùng bấm vào một app không có trên máy đang chọn.
-    ...(changed ? { packageNames: [], packagesStatus: 'idle' as const } : {}),
+    ...(changed ? { ...EMPTY_PACKAGES } : {}),
   }))
 
   if (announce) {
@@ -84,6 +93,43 @@ async function loadPackages(ctx: Context, deps: LogcatPickerDeps, serial: string
     packagesStatus: 'ready',
     packageNames: packages.value,
   }))
+
+  await loadLabels(ctx, deps, serial)
+}
+
+/**
+ * Điền tên app vào danh sách vừa có, từng cái một khi máy chủ đọc xong.
+ *
+ * Chạy TRONG cùng intent với `loadPackages` và dùng cùng `ctx.signal`: đổi
+ * máy hay bấm làm mới là luồng này bị huỷ theo, không cần job riêng để dọn.
+ * Lỗi ở đây không đỏ màn hình — danh sách đã có, chỉ thiếu tên — nên chỉ ghi
+ * `labelsMessage` để màn hình nhắc một dòng.
+ */
+async function loadLabels(ctx: Context, deps: LogcatPickerDeps, serial: string): Promise<void> {
+  ctx.setState((state) => ({ ...state, labelsStatus: 'loading', labelsMessage: null }))
+
+  const outcome = await deps.adb.streamPackageLabels(
+    serial,
+    (event) => {
+      if (ctx.signal.aborted) return
+      if (event.type === 'label') {
+        ctx.setState((state) => ({
+          ...state,
+          deviceLabels: { ...state.deviceLabels, [event.packageName]: event.label },
+        }))
+      } else if (event.type === 'unavailable') {
+        ctx.setState((state) => ({ ...state, labelsStatus: 'unavailable', labelsMessage: event.message }))
+      }
+    },
+    ctx.signal,
+  )
+  if (ctx.signal.aborted) return
+
+  ctx.setState((state) =>
+    outcome.ok
+      ? { ...state, labelsStatus: state.labelsStatus === 'unavailable' ? 'unavailable' : 'ready' }
+      : { ...state, labelsStatus: 'unavailable', labelsMessage: outcome.error.message },
+  )
 }
 
 export const LogcatPickerViewModel = defineViewModel<
@@ -119,12 +165,7 @@ export const LogcatPickerViewModel = defineViewModel<
         return
 
       case 'DeviceSelected': {
-        ctx.setState((state) => ({
-          ...state,
-          selectedSerial: intent.serial,
-          packageNames: [],
-          packagesStatus: 'idle',
-        }))
+        ctx.setState((state) => ({ ...state, selectedSerial: intent.serial, ...EMPTY_PACKAGES }))
         await loadPackages(ctx, deps, intent.serial)
         return
       }

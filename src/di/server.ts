@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { AaptLabelReader } from '@/data/adb/AaptLabelReader'
 import { ProcessAdbShell } from '@/data/adb/ProcessAdbShell'
 import { readAdbSettings } from '@/data/adb/adbSettings'
 import { PrismaAppDirectory } from '@/data/db/PrismaAppDirectory'
@@ -89,10 +90,12 @@ export const serverContainer = {
    */
   adb: {
     shell: adbShell,
+    /** Đọc tên app từ APK qua aapt2 — chỉ route `packages/labels` dùng. */
+    labels: new AaptLabelReader(adbShell),
     settings: () => readAdbSettings(),
   },
   /**
-   * Công cụ Màn hình máy (mirror). `gateway` là MỘT thể hiện dùng chung —
+   * Ô Phản chiếu (mirror) trong Logcat. `gateway` là MỘT thể hiện dùng chung —
    * khác `translation.translatorFor` — vì `TangoMirrorGateway` không giữ
    * trạng thái của riêng người dùng nào; mọi phiên đăng ký qua `sessions`
    * (registry) mới là nơi phân biệt ai đang mở phiên nào.

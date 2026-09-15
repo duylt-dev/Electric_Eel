@@ -16,8 +16,17 @@ import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
  * Đệm giữ tới 5000 dòng, nhưng 5000 hàng DOM thì mỗi lần thêm dòng mới trình
  * duyệt phải tính lại bố cục của cả 5000 — và log chảy nhanh nhất đúng lúc app
  * khởi động, tức là lúc người ta đang nhìn. Vẽ 1500 dòng cuối là đủ để cuộn
- * ngược lên một quãng dài mà vẫn mượt; muốn xem xa hơn thì lọc, hoặc tải tệp
- * về. Con số này được nói ra trên màn hình chứ không giấu đi.
+ * ngược lên một quãng dài mà vẫn mượt; muốn xem xa hơn thì lọc bớt. Con số này
+ * được nói ra trên màn hình chứ không giấu đi.
+ *
+ * ─── Vì sao cỡ chữ và độ thoáng như hiện tại ───
+ *
+ * Người dùng ngồi trước khung này hàng giờ. Bản đầu dùng 0.78rem / dòng sát
+ * nhau để thấy nhiều dòng, và cái giá là mỏi mắt, nhảy dòng khi đọc — một log
+ * thấy được 40 dòng mà đọc sai dòng thì tệ hơn thấy 30 dòng đọc đúng. Cỡ chữ
+ * do người dùng chọn (`fontSizeRem`, nhớ qua localStorage ở
+ * `LogViewControls`), còn kẻ phân cách mờ giữa các dòng thì luôn có: nó là
+ * thứ giữ cho mắt không trôi sang dòng bên cạnh khi một dòng dài gập xuống.
  *
  * ─── Vì sao không dùng thư viện ảo hoá ───
  *
@@ -45,6 +54,8 @@ export interface LogViewProps {
   /** Không cuộn khi đang tạm dừng, dù `autoScroll` vẫn bật. */
   frozen: boolean
   emptyHint: string
+  /** Cỡ chữ người dùng chọn, đơn vị rem — xem `LOG_FONT_SIZES_REM`. */
+  fontSizeRem: number
 }
 
 /** Khoảng cách tới đáy vẫn tính là "đang ở đáy". Một dòng rưỡi. */
@@ -57,6 +68,7 @@ export function LogView({
   onAutoScrollChange,
   frozen,
   emptyHint,
+  fontSizeRem,
 }: LogViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -90,16 +102,18 @@ export function LogView({
     <Box
       ref={containerRef}
       sx={{
-        height: 'clamp(320px, 58vh, 720px)',
+        // Gần hết chiều cao còn lại của trang: đầu trang + một hàng nút ở trên
+        // chiếm ~150px, và khung này là thứ duy nhất đáng chiếm phần còn lại.
+        height: 'clamp(360px, calc(100dvh - 210px), 1200px)',
         overflow: 'auto',
         overscrollBehavior: 'contain',
         border: `1px solid ${m3('outlineVariant')}`,
         borderRadius: `${m3Shape.large}px`,
         backgroundColor: m3('surfaceContainerLowest'),
         fontFamily: MONO_FONT_STACK,
-        fontSize: '0.78rem',
-        lineHeight: 1.55,
-        py: 2,
+        fontSize: `${String(fontSizeRem)}rem`,
+        lineHeight: 1.65,
+        py: 0.75,
       }}
     >
       {rendered.length === 0 ? (
@@ -113,8 +127,8 @@ export function LogView({
         <>
           {hidden > 0 && (
             <Box sx={{ px: 4, py: 2, color: m3('outline') }}>
-              ⋯ {hidden.toLocaleString('vi-VN')} dòng cũ hơn không được vẽ ra. Lọc bớt, hoặc tải tệp
-              về để xem đủ.
+              ⋯ {hidden.toLocaleString('vi-VN')} dòng cũ hơn không được vẽ ra. Lọc theo mức, tag hay
+              chuỗi để thu hẹp lại.
             </Box>
           )}
           {rendered.map((line) => (
@@ -136,9 +150,10 @@ function Row({ line, searchQuery }: { line: LogcatLine; searchQuery: string }) {
         display: 'flex',
         gap: 3,
         px: 4,
-        py: 0.25,
+        py: 0.75,
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
+        borderBottom: `1px solid ${m3('surfaceContainerHigh')}`,
         backgroundColor: severe ? m3('errorContainer') : 'transparent',
         '&:hover': { backgroundColor: severe ? m3('errorContainer') : m3('surfaceContainer') },
       }}

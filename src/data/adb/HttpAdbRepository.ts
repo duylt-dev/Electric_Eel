@@ -1,6 +1,7 @@
 import { AppErrors, type Result, err, ok } from '../../core/result'
 import type { AdbDevice } from '../../domain/adb/entities/AdbDevice'
 import type { LogcatEvent, LogcatRequest } from '../../domain/adb/entities/LogcatSession'
+import type { PackageLabelEvent } from '../../domain/adb/entities/PackageLabelEvent'
 import type { AdbRepository } from '../../domain/adb/repositories/AdbRepository'
 import { toAppErrorFromResponse } from '../http/httpJson'
 import { readNdjson } from '../http/ndjson'
@@ -58,6 +59,28 @@ export class HttpAdbRepository implements AdbRepository {
       signal,
     )
     return body.ok ? ok(body.value.packages) : body
+  }
+
+  async streamPackageLabels(
+    serial: string,
+    onEvent: (event: PackageLabelEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Result<void>> {
+    const query = new URLSearchParams({ serial })
+    let response: Response
+    try {
+      response = await fetch(`${BASE}/packages/labels?${query.toString()}`, {
+        method: 'GET',
+        headers: { Accept: 'application/x-ndjson' },
+        cache: 'no-store',
+        signal,
+      })
+    } catch (thrown) {
+      if (signal.aborted) return err(AppErrors.cancelled('Đã dừng đọc nhãn.'))
+      return err(AppErrors.network('Không kết nối được tới máy chủ.', { cause: thrown }))
+    }
+    if (!response.ok) return err(await toAppErrorFromResponse(response))
+    return readNdjson<PackageLabelEvent>(response, onEvent, signal)
   }
 
   async clearBuffer(serial: string, signal?: AbortSignal): Promise<Result<void>> {

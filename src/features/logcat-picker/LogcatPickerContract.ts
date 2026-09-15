@@ -21,6 +21,12 @@ export type DeviceListStatus = 'loading' | 'ready' | 'failed'
 /** `idle` = chưa chọn máy nào, nên chưa có gì để hỏi. */
 export type PackageListStatus = 'idle' | 'loading' | 'ready' | 'failed'
 
+/**
+ * `unavailable` = máy chủ không đọc được nhãn (thiếu aapt2). Không phải lỗi:
+ * danh sách vẫn dùng được, chỉ không có tên, và `labelsMessage` nói vì sao.
+ */
+export type LabelsStatus = 'idle' | 'loading' | 'ready' | 'unavailable'
+
 export interface LogcatPickerState {
   readonly status: DeviceListStatus
   readonly devices: readonly AdbDevice[]
@@ -33,12 +39,20 @@ export interface LogcatPickerState {
    * App hệ thống không bao giờ có trong này và không có công tắc để bật —
    * `pm list packages -3` là cố định ở tầng use case.
    *
-   * Nhãn và thứ tự hiển thị KHÔNG nằm ở đây: chúng phụ thuộc danh bạ app, mà
-   * danh bạ là dữ liệu của trang chứ không của thiết bị. Màn hình ghép hai thứ
-   * lại bằng `buildPackageList` — một hàm thuần, chạy lại khi ô tìm kiếm đổi
-   * mà không cần ViewModel biết gì về việc đó.
+   * Nhãn danh bạ và thứ tự hiển thị KHÔNG nằm ở đây: danh bạ là dữ liệu của
+   * trang chứ không của thiết bị. Màn hình ghép lại bằng `buildPackageList` —
+   * một hàm thuần, chạy lại khi ô tìm kiếm đổi mà không cần ViewModel biết.
    */
   readonly packageNames: readonly string[]
+
+  /**
+   * applicationId → tên đọc từ APK trên máy. Về DẦN sau `packageNames` qua
+   * một luồng riêng, nên là một trường riêng chứ không nhét vào từng phần tử:
+   * mỗi nhãn tới chỉ thêm một khoá, không dựng lại cả mảng.
+   */
+  readonly deviceLabels: Readonly<Record<string, string>>
+  readonly labelsStatus: LabelsStatus
+  readonly labelsMessage: string | null
 
   readonly error: AppError | null
 }
@@ -49,6 +63,9 @@ export const initialLogcatPickerState: LogcatPickerState = {
   selectedSerial: null,
   packagesStatus: 'idle',
   packageNames: [],
+  deviceLabels: {},
+  labelsStatus: 'idle',
+  labelsMessage: null,
   error: null,
 }
 

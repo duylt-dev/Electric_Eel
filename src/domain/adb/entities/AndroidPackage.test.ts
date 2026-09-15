@@ -4,7 +4,10 @@ import { describe, it } from 'node:test'
 import {
   buildPackageList,
   filterPackages,
+  isSafeApkPath,
   isSafePackageName,
+  parseBadgingLabel,
+  parseInstalledPackages,
   parsePackagesOutput,
 } from './AndroidPackage'
 
@@ -68,5 +71,62 @@ describe('filterPackages', () => {
 
   it('ô rỗng trả về nguyên danh sách', () => {
     assert.equal(filterPackages(list, '   ').length, 2)
+  })
+})
+
+describe('parseInstalledPackages', () => {
+  it('giữ đường dẫn APK cùng package name', () => {
+    const items = parseInstalledPackages(
+      'package:/data/app/~~1DbGADK4tNX4LBC8zs74Kg==/co.rbx-Chl4oTu5ntkP4K6EipKQIw==/base.apk=co.rbx\n',
+    )
+    assert.deepEqual(items, [
+      { packageName: 'co.rbx', apkPath: '/data/app/~~1DbGADK4tNX4LBC8zs74Kg==/co.rbx-Chl4oTu5ntkP4K6EipKQIw==/base.apk' },
+    ])
+  })
+
+  it('bỏ dòng không có đường dẫn hoặc đường dẫn không sạch — app đó chỉ mất nhãn', () => {
+    const items = parseInstalledPackages(
+      ['package:com.a', "package:/data/app/x'y/base.apk=com.b", 'package:/data/app/c/base.apk=com.c'].join('\n'),
+    )
+    assert.deepEqual(items, [{ packageName: 'com.c', apkPath: '/data/app/c/base.apk' }])
+  })
+})
+
+describe('isSafeApkPath', () => {
+  it('từ chối mọi thứ có nghĩa với shell của máy', () => {
+    for (const value of ['/a b/base.apk', '/a;rm/base.apk', '/a/$HOME/base.apk', '/a/../b.apk', 'rel/base.apk', '/a/base']) {
+      assert.equal(isSafeApkPath(value), false, value)
+    }
+  })
+})
+
+describe('parseBadgingLabel', () => {
+  it('lấy nhãn mặc định, bỏ qua bản dịch', () => {
+    const stdout = [
+      "package: name='co.rbx' versionCode='5'",
+      "application-label:'RBX Clothes Maker'",
+      "application-label-vi:'RBX Làm đồ'",
+    ].join('\n')
+    assert.equal(parseBadgingLabel(stdout), 'RBX Clothes Maker')
+  })
+
+  it('bỏ escape dấu nháy, và trả null khi không có dòng nhãn', () => {
+    assert.equal(parseBadgingLabel("application-label:'Tom\\'s App'"), "Tom's App")
+    assert.equal(parseBadgingLabel("package: name='co.rbx'"), null)
+  })
+})
+
+describe('buildPackageList với nhãn máy', () => {
+  it('danh bạ thắng nhãn máy; nhãn máy thắng package name; `known` chỉ nói về danh bạ', () => {
+    const list = buildPackageList(
+      ['com.a', 'com.b', 'com.c'],
+      new Map([['com.a', 'Tên đội đặt']]),
+      { 'com.a': 'Tên trên máy', 'com.b': 'App B' },
+    )
+    assert.deepEqual(list, [
+      { packageName: 'com.a', label: 'Tên đội đặt', known: true },
+      { packageName: 'com.b', label: 'App B', known: false },
+      { packageName: 'com.c', label: null, known: false },
+    ])
   })
 })

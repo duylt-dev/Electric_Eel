@@ -97,7 +97,6 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
       <PageHeader
         eyebrow="Logcat"
         title="Chọn máy và app"
-        subtitle="Chọn thiết bị đang cắm, rồi chọn app cần xem log. Màn tiếp theo chỉ hiện log của đúng tiến trình app đó."
         meta={
           <>
             <MetaChip label="thiết bị">{usable.length}</MetaChip>
@@ -107,7 +106,7 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
           </>
         }
         actions={
-          <Button
+          <Button size="small"
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={() => onIntent({ type: 'DevicesRefreshRequested' })}
@@ -180,6 +179,9 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
             <AppList
               packageNames={state.packageNames}
               labels={labels}
+              deviceLabels={state.deviceLabels}
+              labelsStatus={state.labelsStatus}
+              labelsMessage={state.labelsMessage}
               unlinked={unlinked}
               onOpen={(packageName, label) => onIntent({ type: 'AppOpened', packageName, label })}
             />

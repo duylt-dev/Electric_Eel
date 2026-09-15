@@ -2,17 +2,17 @@ import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
 import { clientContainer } from '@/di/client'
 import { DEFAULT_LOGCAT_FILTER, toggleLevel } from '@/domain/adb/entities/LogcatFilter'
-import { formatLogcatLine, parseLogcatLine } from '@/domain/adb/entities/LogcatLine'
+import { parseLogcatLine } from '@/domain/adb/entities/LogcatLine'
 import type { LogcatLine } from '@/domain/adb/entities/LogcatLine'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
-import { appendLines, initialAdbLogcatState, logFileName, visibleLines } from './AdbLogcatContract'
+import { appendLines, initialAdbLogcatState } from './AdbLogcatContract'
 import type { AdbLogcatEffect, AdbLogcatIntent, AdbLogcatState } from './AdbLogcatContract'
 
 /**
  * ViewModel của màn xem log.
  *
  * Không một dòng React nào trong file này — luật ESLint chặn nếu ai đó thêm
- * vào. Việc tải tệp về là Effect, không phải lời gọi thẳng vào `document`.
+ * vào. Thông báo lên màn hình là Effect, không phải lời gọi thẳng vào DOM.
  *
  * ─── Vì sao tách dòng ở đây chứ không ở máy chủ ───
  *
@@ -199,31 +199,6 @@ export const AdbLogcatViewModel = defineViewModel<
       case 'AutoScrollChanged':
         ctx.setState((state) => ({ ...state, autoScroll: intent.value }))
         return
-
-      case 'DownloadRequested': {
-        const state = ctx.getState()
-        // Tải về ĐÚNG thứ đang thấy, không phải toàn bộ đệm: người ta bấm tải
-        // sau khi đã lọc ra được vài chục dòng đáng gửi cho đồng nghiệp, và
-        // một tệp năm nghìn dòng thì lọc lại từ đầu.
-        const shown = visibleLines(state)
-        if (shown.length === 0) {
-          ctx.emit({ type: 'ShowMessage', severity: 'error', message: 'Chưa có dòng nào để tải.' })
-          return
-        }
-
-        const header = [
-          `# ${state.packageName} · thiết bị ${state.serial}`,
-          `# ${shown.length} dòng, xuất lúc ${new Date().toLocaleString('vi-VN')}`,
-          '',
-        ].join('\n')
-
-        ctx.emit({
-          type: 'DownloadLog',
-          fileName: logFileName(state.packageName, new Date()),
-          content: header + shown.map(formatLogcatLine).join('\n') + '\n',
-        })
-        return
-      }
     }
   },
 

@@ -1,7 +1,8 @@
 import { AppErrors, type Result, err, ok } from '../../../core/result'
 import { isSafeSerial, parseDevicesOutput } from '../entities/AdbDevice'
 import type { AdbDevice } from '../entities/AdbDevice'
-import { isSafePackageName, parsePackagesOutput } from '../entities/AndroidPackage'
+import { isSafePackageName, parseInstalledPackages, parsePackagesOutput } from '../entities/AndroidPackage'
+import type { InstalledPackage } from '../entities/AndroidPackage'
 import type { AdbRunOutput, AdbShell } from '../repositories/AdbShell'
 
 /**
@@ -76,6 +77,28 @@ export async function listPackages(
     return commandFailure(output.value, 'Không đọc được danh sách app trên máy.')
   }
   return ok(parsePackagesOutput(output.value.stdout))
+}
+
+/**
+ * Như `listPackages` nhưng kèm đường dẫn APK — đầu vào của `readPackageLabels`.
+ *
+ * Tách riêng thay vì thêm cờ: hai hàm trả hai kiểu khác nhau, và route trả
+ * danh sách trần không cần biết tới đường dẫn trên máy.
+ */
+export async function listInstalledPackages(
+  shell: AdbShell,
+  serial: string,
+  signal?: AbortSignal,
+): Promise<Result<InstalledPackage[]>> {
+  if (!isSafeSerial(serial)) return err(AppErrors.validation('Serial thiết bị không hợp lệ.'))
+
+  const args = ['shell', 'pm', 'list', 'packages', '-3', '-f']
+  const output = await shell.run({ serial, args, timeoutMs: 30_000 }, signal)
+  if (!output.ok) return output
+  if (!succeeded(output.value)) {
+    return commandFailure(output.value, 'Không đọc được danh sách app trên máy.')
+  }
+  return ok(parseInstalledPackages(output.value.stdout))
 }
 
 export async function clearLogcatBuffer(

@@ -1,6 +1,7 @@
 import type { Result } from '../../../core/result'
 import type { AdbDevice } from '../entities/AdbDevice'
 import type { LogcatEvent, LogcatRequest } from '../entities/LogcatSession'
+import type { PackageLabelEvent } from '../entities/PackageLabelEvent'
 
 /**
  * Cổng mà ViewModel dùng. Bên trình duyệt nó là các lệnh gọi Route Handler;
@@ -16,6 +17,19 @@ export interface AdbRepository {
 
   /** applicationId của các app CÀI THÊM trên máy. App hệ thống không bao giờ có mặt. */
   listPackages(serial: string, signal?: AbortSignal): Promise<Result<string[]>>
+
+  /**
+   * Nhãn hiển thị của các app trên máy, về dần từng cái.
+   *
+   * Tách khỏi `listPackages` vì hai thứ tốn khác nhau: danh sách về trong một
+   * lệnh adb, còn nhãn phải đọc từng APK. Gộp lại thì màn hình trống cho tới
+   * khi app cuối cùng có tên. Chỉ trả về khi luồng kết thúc hoặc bị huỷ.
+   */
+  streamPackageLabels(
+    serial: string,
+    onEvent: (event: PackageLabelEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Result<void>>
 
   /** `adb logcat -c` — xoá đệm log NẰM TRÊN MÁY, không phải xoá màn hình. */
   clearBuffer(serial: string, signal?: AbortSignal): Promise<Result<void>>

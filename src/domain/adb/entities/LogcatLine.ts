@@ -90,9 +90,3 @@ export function parseLogcatLine(raw: string, seq: number): LogcatLine | null {
     message: message ?? '',
   }
 }
-
-/** Dựng lại một dòng văn bản để ghi ra tệp tải về. */
-export const formatLogcatLine = (line: LogcatLine): string =>
-  line.time.length === 0
-    ? line.message
-    : `${line.time}  ${line.pid}  ${line.tid} ${line.level} ${line.tag}: ${line.message}`

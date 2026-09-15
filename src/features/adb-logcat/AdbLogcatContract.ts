@@ -8,7 +8,7 @@ import type { LogLevel, LogcatLine } from '@/domain/adb/entities/LogcatLine'
  *
  *   State  — thứ màn hình vẽ ra. Dữ liệu thuần: không hàm, không đối tượng lớp.
  *   Intent — mọi thứ có thể yêu cầu ViewModel làm. Đường vào duy nhất.
- *   Effect — việc xảy ra một lần: thông báo, tải tệp về.
+ *   Effect — việc xảy ra một lần: thông báo.
  */
 
 // ─── State ──────────────────────────────────────────────────────────────────
@@ -93,14 +93,14 @@ export type AdbLogcatIntent =
   | { type: 'QueryChanged'; value: string }
   | { type: 'FilterCleared' }
   | { type: 'AutoScrollChanged'; value: boolean }
-  | { type: 'DownloadRequested' }
 
 // ─── Effect ─────────────────────────────────────────────────────────────────
 
-export type AdbLogcatEffect =
-  | { type: 'ShowMessage'; severity: 'success' | 'error' | 'info'; message: string }
-  /** Trình duyệt lưu tệp về thư mục Tải xuống. */
-  | { type: 'DownloadLog'; fileName: string; content: string }
+export type AdbLogcatEffect = {
+  type: 'ShowMessage'
+  severity: 'success' | 'error' | 'info'
+  message: string
+}
 
 // ─── Dẫn xuất từ state ──────────────────────────────────────────────────────
 //
@@ -129,11 +129,4 @@ export function appendLines(
 
   const excess = merged.length - MAX_BUFFERED_LINES
   return { lines: merged.slice(excess), dropped: dropped + excess }
-}
-
-/** `logcat-com.pion.lovetest-20260903-1145.txt` — đọc tên là biết của app nào, lúc nào. */
-export function logFileName(packageName: string, at: Date): string {
-  const pad = (value: number): string => String(value).padStart(2, '0')
-  const stamp = `${at.getFullYear()}${pad(at.getMonth() + 1)}${pad(at.getDate())}-${pad(at.getHours())}${pad(at.getMinutes())}`
-  return `logcat-${packageName}-${stamp}.txt`
 }

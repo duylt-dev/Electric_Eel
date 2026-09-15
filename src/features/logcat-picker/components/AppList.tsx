@@ -14,6 +14,7 @@ import { useDeferredValue, useMemo, useState } from 'react'
 
 import { buildPackageList, filterPackages } from '@/domain/adb/entities/AndroidPackage'
 import type { AndroidPackage } from '@/domain/adb/entities/AndroidPackage'
+import type { LabelsStatus } from '@/features/logcat-picker/LogcatPickerContract'
 import { Pagination, usePagination } from '@/ui/components/Pagination'
 import { StatusChip } from '@/ui/components/StatusChip'
 import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
@@ -34,18 +35,34 @@ import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
 export interface AppListProps {
   /** applicationId đọc từ máy, chưa có nhãn. */
   packageNames: readonly string[]
-  /** applicationId → tên hiển thị, lấy từ danh bạ app của tool. */
+  /** applicationId → tên hiển thị, lấy từ danh bạ app của tool. Thắng nhãn máy. */
   labels: ReadonlyMap<string, string>
+  /** applicationId → tên đọc từ APK trên máy, điền dần trong lúc `labelsStatus` là `loading`. */
+  deviceLabels: Readonly<Record<string, string>>
+  labelsStatus: LabelsStatus
+  /** Vì sao không đọc được nhãn, khi `labelsStatus` là `unavailable`. */
+  labelsMessage: string | null
   /** App trong danh bạ chưa ai điền applicationId. Hiện ra nhưng không mở được. */
   unlinked: readonly { slug: string; displayName: string }[]
   onOpen: (packageName: string | null, label: string) => void
 }
 
-export function AppList({ packageNames, labels, unlinked, onOpen }: AppListProps) {
+export function AppList({
+  packageNames,
+  labels,
+  deviceLabels,
+  labelsStatus,
+  labelsMessage,
+  unlinked,
+  onOpen,
+}: AppListProps) {
   const [query, setQuery] = useState('')
   const deferredQuery = useDeferredValue(query)
 
-  const packages = useMemo(() => buildPackageList(packageNames, labels), [packageNames, labels])
+  const packages = useMemo(
+    () => buildPackageList(packageNames, labels, deviceLabels),
+    [packageNames, labels, deviceLabels],
+  )
   const results = useMemo(() => filterPackages(packages, deferredQuery), [packages, deferredQuery])
 
   const needle = deferredQuery.trim().toLowerCase()
@@ -117,8 +134,15 @@ export function AppList({ packageNames, labels, unlinked, onOpen }: AppListProps
           {searching
             ? `${paged.total} / ${packages.length} app khớp`
             : `${packages.length} app trên máy`}
+          {labelsStatus === 'loading' && ' · đang đọc tên app…'}
         </Typography>
       </Stack>
+
+      {labelsStatus === 'unavailable' && labelsMessage !== null && (
+        <Typography variant="caption" sx={{ color: m3('onSurfaceVariant') }}>
+          {labelsMessage}
+        </Typography>
+      )}
 
       {paged.total === 0 ? (
         <NoMatch query={deferredQuery.trim()} onClear={() => setQuery('')} />
