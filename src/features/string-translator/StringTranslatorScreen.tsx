@@ -16,11 +16,9 @@ import type { ReactNode } from 'react'
 
 import { findLanguage } from '@/domain/translation/entities/LanguageCode'
 import { MAX_APP_DESCRIPTION_LENGTH } from '@/domain/translation/entities/TranslationSettings'
-import { MetaChip } from '@/ui/components/MetaChip'
-import { PageHeader } from '@/ui/components/PageHeader'
 import { m3, m3Mono, m3Shape } from '@/ui/theme/m3Tokens'
 import { StringTranslatorViewModel } from './StringTranslatorViewModel'
-import { canTranslate, formatBytes, isConfigured, progressRatio, providerLabel } from './StringTranslatorContract'
+import { canTranslate, formatBytes, isConfigured, progressRatio } from './StringTranslatorContract'
 import type { StringTranslatorEffect } from './StringTranslatorContract'
 import { FileDropZone } from './components/FileDropZone'
 import { LanguagePicker } from './components/LanguagePicker'
@@ -85,20 +83,6 @@ export function StringTranslatorScreen() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Dịch"
-        title="strings.xml đa ngôn ngữ"
-        meta={
-          <>
-            <MetaChip label="mô hình">{providerLabel(state.settings)}</MetaChip>
-            <MetaChip label="ngôn ngữ đã chọn">{state.selected.length}</MetaChip>
-            {state.report === null ? null : (
-              <MetaChip label="chuỗi">{state.report.translatableCount}</MetaChip>
-            )}
-          </>
-        }
-      />
-
       <Stack spacing={7} sx={{ maxWidth: 960 }}>
         <Step
           index={1}

@@ -5,6 +5,7 @@ import SmartphoneIcon from '@mui/icons-material/Smartphone'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'
@@ -13,22 +14,18 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { countByLevel } from '@/domain/adb/entities/LogcatFilter'
 import { DeviceMirrorRoot } from '@/features/device-mirror/DeviceMirrorRoot'
-import { LinkButton } from '@/ui/components/NavLink'
-import { MetaChip } from '@/ui/components/MetaChip'
+import { LinkIconButton } from '@/ui/components/NavLink'
 import { PageHeader } from '@/ui/components/PageHeader'
-import { StatusChip } from '@/ui/components/StatusChip'
 import { m3 } from '@/ui/theme/m3Tokens'
 import { AdbLogcatViewModel } from './AdbLogcatViewModel'
 import { isLive, visibleLines } from './AdbLogcatContract'
-import type { AdbLogcatEffect, AdbLogcatState } from './AdbLogcatContract'
+import type { AdbLogcatEffect } from './AdbLogcatContract'
 import { LogFilterBar } from './components/LogFilterBar'
 import { LogToolbar } from './components/LogToolbar'
 import { LogView } from './components/LogView'
 import { LOG_FONT_SIZES_REM, LogViewControls, useLogFontSize } from './components/LogViewControls'
 
 export interface AdbLogcatScreenProps {
-  /** Tên hiển thị lấy từ danh bạ app, nếu package này là app của đội. */
-  appName: string | null
   /**
    * Máy chủ mở được luồng mirror (ADB bật + có scrcpy-server). Trang tính sẵn
    * ở phía server để không hiện một nút chắc chắn hỏng; thiếu gì thì
@@ -59,7 +56,7 @@ const MIRROR_PANEL_WIDTH = 340
  * không cần biết gì về mirror. Mặc định ĐÓNG — mở là một `app_process` chạy
  * trên máy, không phải thứ tự động bật mỗi lần ai đó xem log.
  */
-export function AdbLogcatScreen({ appName, mirrorAvailable }: AdbLogcatScreenProps) {
+export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
   const state = AdbLogcatViewModel.useState()
   const onIntent = AdbLogcatViewModel.useIntent()
 
@@ -84,44 +81,31 @@ export function AdbLogcatScreen({ appName, mirrorAvailable }: AdbLogcatScreenPro
 
   return (
     <>
-      <PageHeader
-        eyebrow="Logcat"
-        title={appName ?? state.packageName}
-        meta={
-          <>
-            <StatusBadge state={state} />
-            {state.pid !== null && <MetaChip label="pid">{state.pid}</MetaChip>}
-            {state.restarts > 0 && <MetaChip label="lần chạy lại">{state.restarts}</MetaChip>}
-            {state.dropped > 0 && (
-              <MetaChip label="dòng cũ đã bỏ">{state.dropped.toLocaleString('vi-VN')}</MetaChip>
-            )}
-          </>
-        }
-        actions={
-          <>
-            {mirrorAvailable && (
-              <Tooltip
-                title={
-                  mirrorOpen
-                    ? 'Đóng ô. Luồng scrcpy dừng theo.'
-                    : 'Phản chiếu màn hình của chính máy này ngay cạnh log, ở độ nét cao nhất. Tab khác đang phản chiếu cùng máy sẽ bị ngắt — một máy chỉ chảy về một nơi.'
-                }
-              >
-                <Button size="small"
-                  variant={mirrorOpen ? 'outlined' : 'text'}
-                  startIcon={<SmartphoneIcon />}
-                  onClick={() => setMirrorOpen((open) => !open)}
-                >
-                  Phản chiếu
-                </Button>
-              </Tooltip>
-            )}
-            <LinkButton size="small" href="/logcat" variant="text" startIcon={<ArrowBackIcon />}>
-              Đổi app
-            </LinkButton>
-          </>
-        }
-      />
+      <PageHeader>
+        {mirrorAvailable && (
+          <Tooltip
+            title={
+              mirrorOpen
+                ? 'Đóng ô phản chiếu. Luồng scrcpy dừng theo.'
+                : 'Phản chiếu màn hình của chính máy này ngay cạnh log, ở độ nét cao nhất. Tab khác đang phản chiếu cùng máy sẽ bị ngắt — một máy chỉ chảy về một nơi.'
+            }
+          >
+            <IconButton
+              size="small"
+              color={mirrorOpen ? 'primary' : 'default'}
+              aria-label={mirrorOpen ? 'Đóng phản chiếu' : 'Phản chiếu màn hình'}
+              onClick={() => setMirrorOpen((open) => !open)}
+            >
+              <SmartphoneIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
+        <Tooltip title="Đổi máy hoặc app">
+          <LinkIconButton size="small" href="/logcat" aria-label="Đổi máy hoặc app">
+            <ArrowBackIcon fontSize="small" />
+          </LinkIconButton>
+        </Tooltip>
+      </PageHeader>
 
       <Stack direction={{ xs: 'column', lg: 'row' }} spacing={4} sx={{ alignItems: 'flex-start' }}>
         {/* `minWidth: 0` — không có nó, một dòng log dài kéo cột này rộng ra
@@ -227,21 +211,3 @@ export function AdbLogcatScreen({ appName, mirrorAvailable }: AdbLogcatScreenPro
   )
 }
 
-function StatusBadge({ state }: { state: AdbLogcatState }) {
-  switch (state.status) {
-    case 'streaming':
-      return (
-        <StatusChip tone={state.paused ? 'warn' : 'ok'} dot>
-          {state.paused ? 'đang tạm dừng' : 'đang chảy'}
-        </StatusChip>
-      )
-    case 'connecting':
-      return <StatusChip tone="info" dot>đang nối</StatusChip>
-    case 'waiting':
-      return <StatusChip tone="warn" dot>chờ app chạy</StatusChip>
-    case 'failed':
-      return <StatusChip tone="bad" dot>hỏng</StatusChip>
-    default:
-      return <StatusChip dot>đã dừng</StatusChip>
-  }
-}

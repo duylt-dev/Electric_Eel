@@ -36,10 +36,10 @@ export interface AppShellProps {
  * công cụ thứ hai là phải sắp lại toàn bộ; xếp theo công cụ thì mỗi công cụ tự
  * lo phần điều hướng bên trong nó, và cái khung này không phải đổi nữa.
  *
- * Khung cố ý giữ rất ít chữ: nó chỉ nói *đang ở công cụ nào*. Tiêu đề, mô tả và
- * các con số của từng trang thuộc về `<PageHeader>` của chính trang đó — nhờ
- * vậy khung vẫn không cần biết gì về từng trang, mà mỗi trang vẫn nói được
- * những thứ chỉ nó biết (đang sửa app nào, còn bao nhiêu cảnh báo).
+ * Khung cố ý giữ rất ít chữ: nó chỉ nói *đang ở công cụ nào* — và đó là chữ
+ * DUY NHẤT về vị trí trên trang, vì `<PageHeader>` của từng trang giờ chỉ còn
+ * hàng nút. Nhờ vậy khung không cần biết gì về từng trang, mà mỗi trang vẫn tự
+ * lo hành động của nó.
  *
  * Cột công cụ thu được (nút ở đầu header, nhớ qua `useSidebarOpen`): các công
  * cụ như mirror hay logcat cần bề ngang hơn là cần thấy danh sách công cụ. Khi

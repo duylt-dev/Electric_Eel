@@ -5,9 +5,7 @@ import type { Metadata } from 'next'
 import { canEditApp, canPublishApp } from '@/domain/identity/entities/Permission'
 import { requireAppAccess } from '@/lib/session'
 import { ConfigEditorRoot } from '@/features/config-editor/ConfigEditorRoot'
-import { MetaChip } from '@/ui/components/MetaChip'
 import { LinkButton } from '@/ui/components/NavLink'
-import { PageHeader } from '@/ui/components/PageHeader'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -39,11 +37,6 @@ export default async function ConfigEditorPage({ params }: PageProps) {
   if (!app.hasCredential) {
     return (
       <>
-        <PageHeader
-          eyebrow="Remote Config"
-          title={app.displayName}
-          meta={<MetaChip label="project">{app.projectId}</MetaChip>}
-        />
         <Stack spacing={4} sx={{ maxWidth: 720 }}>
           <Alert severity="warning">
             App này chưa được gắn service account nên chưa nối được với Firebase. Cần một service
@@ -67,8 +60,6 @@ export default async function ConfigEditorPage({ params }: PageProps) {
   return (
     <ConfigEditorRoot
       appSlug={app.slug}
-      appName={app.displayName}
-      projectId={app.projectId}
       canEdit={canEditApp(user, appAccess)}
       canPublish={canPublishApp(user, appAccess)}
     />

@@ -1,16 +1,16 @@
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import type { Metadata } from 'next'
 
 import { serverContainer } from '@/di/server'
 import type { AppRole } from '@/domain/identity/entities/Permission'
 import { requireAdmin } from '@/lib/session'
-import { MetaChip } from '@/ui/components/MetaChip'
-import { LinkButton } from '@/ui/components/NavLink'
+import { LinkIconButton } from '@/ui/components/NavLink'
 import { PageHeader } from '@/ui/components/PageHeader'
-import { StatusChip } from '@/ui/components/StatusChip'
 import { m3, m3Shape } from '@/ui/theme/m3Tokens'
 import { CredentialForm, MembershipForm, PackageNameForm } from './AppCredentialForms'
 
@@ -64,31 +64,13 @@ export default async function AppAdminPage({ params }: PageProps) {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Quản trị · Project"
-        title={app.displayName}
-        meta={
-          <>
-            <MetaChip label="project">{app.projectId}</MetaChip>
-            <MetaChip label="đường dẫn">/{app.slug}</MetaChip>
-            {app.packageName !== null && <MetaChip label="package">{app.packageName}</MetaChip>}
-            {app.hasCredential ? (
-              <StatusChip tone="ok" dot>
-                đã nối Firebase
-              </StatusChip>
-            ) : (
-              <StatusChip tone="bad" dot>
-                chưa gắn service account
-              </StatusChip>
-            )}
-          </>
-        }
-        actions={
-          <LinkButton href="/admin" size="small">
-            ← Về danh sách
-          </LinkButton>
-        }
-      />
+      <PageHeader>
+        <Tooltip title="Về danh sách project">
+          <LinkIconButton href="/admin" size="small" aria-label="Về danh sách project">
+            <ArrowBackIcon fontSize="small" />
+          </LinkIconButton>
+        </Tooltip>
+      </PageHeader>
 
       <Stack spacing={7}>
         <Box sx={panelSx}>

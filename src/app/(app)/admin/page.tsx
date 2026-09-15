@@ -12,9 +12,7 @@ import type { Metadata } from 'next'
 import { serverContainer } from '@/di/server'
 import { GLOBAL_ROLE_LABEL } from '@/domain/identity/entities/Permission'
 import { requireAdmin } from '@/lib/session'
-import { MetaChip } from '@/ui/components/MetaChip'
 import { LinkButton } from '@/ui/components/NavLink'
-import { PageHeader } from '@/ui/components/PageHeader'
 import { Scroller } from '@/ui/components/Scroller'
 import { SectionHeading } from '@/ui/components/SectionHeading'
 import { StatusChip } from '@/ui/components/StatusChip'
@@ -34,17 +32,6 @@ export default async function AdminPage() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Quản trị"
-        title="Tài khoản và project"
-        meta={
-          <>
-            <MetaChip label="project">{apps.ok ? apps.value.length : '—'}</MetaChip>
-            <MetaChip label="tài khoản">{users.ok ? users.value.length : '—'}</MetaChip>
-          </>
-        }
-      />
-
       <Stack spacing={10}>
         <Box>
           <SectionHeading

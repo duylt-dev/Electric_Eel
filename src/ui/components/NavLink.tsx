@@ -4,6 +4,8 @@ import Button from '@mui/material/Button'
 import type { ButtonProps } from '@mui/material/Button'
 import CardActionArea from '@mui/material/CardActionArea'
 import type { CardActionAreaProps } from '@mui/material/CardActionArea'
+import IconButton from '@mui/material/IconButton'
+import type { IconButtonProps } from '@mui/material/IconButton'
 import NextLink from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -38,6 +40,21 @@ export function LinkButton({ href, children, ...buttonProps }: LinkButtonProps) 
     <Button {...buttonProps} component={NextLink} href={href}>
       {children}
     </Button>
+  )
+}
+
+type LinkIconButtonProps = Omit<IconButtonProps<typeof NextLink>, 'component'> & {
+  href: string
+  /** Bắt buộc: nút không có chữ thì đây là thứ duy nhất đọc màn hình đọc được. */
+  'aria-label': string
+  children: ReactNode
+}
+
+export function LinkIconButton({ href, children, ...buttonProps }: LinkIconButtonProps) {
+  return (
+    <IconButton {...buttonProps} component={NextLink} href={href}>
+      {children}
+    </IconButton>
   )
 }
 

@@ -6,7 +6,8 @@ import type { ReactNode } from 'react'
 import { m3 } from '../theme/m3Tokens'
 
 /**
- * Tiêu đề của một mục bên trong trang — nhỏ hơn `<PageHeader>` một bậc.
+ * Tiêu đề của một mục bên trong trang — và là chữ tiêu đề lớn nhất trên
+ * trang, vì `<PageHeader>` không còn tiêu đề.
  *
  * `hint` là chỗ nói *hậu quả*, không phải chỗ nhắc lại tiêu đề. "Tài khoản" thì
  * ai cũng đọc được; thứ người ta cần biết là khoá một tài khoản thì người đó

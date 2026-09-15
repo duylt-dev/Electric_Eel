@@ -6,8 +6,6 @@ import type { Metadata } from 'next'
 
 import { serverContainer } from '@/di/server'
 import { requireUser } from '@/lib/session'
-import { MetaChip } from '@/ui/components/MetaChip'
-import { PageHeader } from '@/ui/components/PageHeader'
 import { m3 } from '@/ui/theme/m3Tokens'
 import { AppPicker } from './AppPicker'
 
@@ -28,10 +26,6 @@ export default async function RemoteConfigIndexPage() {
   if (apps.value.length === 0) {
     return (
       <>
-        <PageHeader
-          eyebrow="Remote Config"
-          title="Chưa có app nào"
-        />
         <Stack spacing={4} sx={{ alignItems: 'center', py: 16, textAlign: 'center' }}>
           <CloudOffIcon sx={{ fontSize: 44, color: m3('outline') }} />
           <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
@@ -42,21 +36,8 @@ export default async function RemoteConfigIndexPage() {
     )
   }
 
-  const connected = apps.value.filter((app) => app.hasCredential).length
-
   return (
     <>
-      <PageHeader
-        eyebrow="Remote Config"
-        title="Chọn app"
-        meta={
-          <>
-            <MetaChip label="app">{apps.value.length}</MetaChip>
-            <MetaChip label="đã nối Firebase">{connected}</MetaChip>
-          </>
-        }
-      />
-
       {/* Danh sách và ô tìm kiếm chạy ở trình duyệt; trang này chỉ lo quyền và dữ liệu. */}
       <AppPicker apps={apps.value} />
     </>

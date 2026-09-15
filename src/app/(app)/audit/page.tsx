@@ -12,8 +12,6 @@ import type { Metadata } from 'next'
 import { serverContainer } from '@/di/server'
 import type { AuditAction } from '@/domain/identity/repositories/AuditLogRepository'
 import { requireUser } from '@/lib/session'
-import { MetaChip } from '@/ui/components/MetaChip'
-import { PageHeader } from '@/ui/components/PageHeader'
 import { Scroller } from '@/ui/components/Scroller'
 import { StatusChip } from '@/ui/components/StatusChip'
 import { MONO_FONT_STACK, m3 } from '@/ui/theme/m3Tokens'
@@ -62,22 +60,8 @@ export default async function AuditPage() {
   )
   if (!entries.ok) return <Alert severity="error">{entries.error.message}</Alert>
 
-  const failed = entries.value.filter((entry) => !entry.succeeded).length
-
   return (
     <>
-      <PageHeader
-        eyebrow="Nhật ký"
-        title="Thao tác gần đây"
-        meta={
-          <>
-            <MetaChip label="bản ghi">{entries.value.length}</MetaChip>
-            <MetaChip label="hỏng">{failed}</MetaChip>
-            <MetaChip label="phạm vi">{user.value.role === 'ADMIN' ? 'toàn hệ thống' : 'cá nhân'}</MetaChip>
-          </>
-        }
-      />
-
       <Scroller>
         <Table size="small" sx={{ minWidth: 860 }}>
           <TableHead>

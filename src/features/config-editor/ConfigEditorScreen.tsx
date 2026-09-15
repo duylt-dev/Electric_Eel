@@ -9,6 +9,7 @@ import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
 import CircularProgress from '@mui/material/CircularProgress'
 import Divider from '@mui/material/Divider'
+import IconButton from '@mui/material/IconButton'
 import LinearProgress from '@mui/material/LinearProgress'
 import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
@@ -16,6 +17,7 @@ import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
+import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useCallback, useMemo, useRef, useState } from 'react'
 
@@ -24,9 +26,7 @@ import { DEFAULT_VARIANT_LABEL } from '@/domain/ads/AdsWorkspace'
 import type { ParameterName } from '@/domain/ads/WorkspaceEdits'
 import { matchConfigName } from '@/domain/ads/entities/AdmobIdDocument'
 import type { Finding } from '@/domain/ads/validation/Finding'
-import { MetaChip } from '@/ui/components/MetaChip'
 import { PageHeader } from '@/ui/components/PageHeader'
-import { StatusChip } from '@/ui/components/StatusChip'
 import { MONO_FONT_STACK, m3, m3Mono, m3Shape } from '@/ui/theme/m3Tokens'
 import { ConfigEditorViewModel } from './ConfigEditorViewModel'
 import { currentResolved, hasUnsavedChanges, visiblePlacements } from './ConfigEditorContract'
@@ -47,8 +47,6 @@ const TAB_LABEL: Record<EditorTab, string> = {
 }
 
 export interface ConfigEditorScreenProps {
-  appName: string
-  projectId: string
   /** Quyền của người đang đăng nhập trên app này. */
   canEdit: boolean
   canPublish: boolean
@@ -61,7 +59,7 @@ export interface ConfigEditorScreenProps {
  * Mọi quyết định "khi bấm nút này thì điều gì xảy ra" nằm trong ViewModel.
  * Nhìn vào file này chỉ trả lời được câu "trông nó thế nào", đúng như mong đợi.
  */
-export function ConfigEditorScreen({ appName, projectId, canEdit, canPublish }: ConfigEditorScreenProps) {
+export function ConfigEditorScreen({ canEdit, canPublish }: ConfigEditorScreenProps) {
   const state = ConfigEditorViewModel.useState()
   const onIntent = ConfigEditorViewModel.useIntent()
 
@@ -179,42 +177,29 @@ export function ConfigEditorScreen({ appName, projectId, canEdit, canPublish }: 
 
   return (
     <Stack spacing={5} sx={{ height: '100%', minHeight: 0 }}>
-      <PageHeader
-        eyebrow="Remote Config"
-        title={appName}
-        meta={
-          <>
-            <MetaChip label="project">{projectId}</MetaChip>
-            <MetaChip label="vị trí">{resolved?.showAds?.listConfig.length ?? 0}</MetaChip>
-            <MetaChip label="ad unit">{resolved?.admob?.listAds.length ?? 0}</MetaChip>
-            {readOnly && <StatusChip>chỉ xem</StatusChip>}
-            {dirty && (
-              <StatusChip tone="warn" dot>
-                có thay đổi chưa lưu
-              </StatusChip>
-            )}
-          </>
-        }
-        actions={
-          <>
-            <Button
+      <PageHeader>
+        <Tooltip title="Tải lại từ Firebase">
+          <span>
+            <IconButton
               size="small"
-              startIcon={<RefreshIcon />}
+              aria-label="Tải lại từ Firebase"
               onClick={() => onIntent({ type: 'Reload' })}
               disabled={state.publishing}
             >
-              Tải lại
-            </Button>
-            <Button size="small"
-              variant="contained"
-              onClick={() => setDiffOpen(true)}
-              disabled={!dirty || !canPublish || state.publishing}
-            >
-              Xem và đẩy lên
-            </Button>
-          </>
-        }
-      />
+              <RefreshIcon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<UploadIcon />}
+          onClick={() => setDiffOpen(true)}
+          disabled={!dirty || !canPublish || state.publishing}
+        >
+          Đẩy lên
+        </Button>
+      </PageHeader>
 
       <VariantBar
         conditions={state.draft.conditions.map((condition) => condition.name)}
