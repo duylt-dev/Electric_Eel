@@ -9,7 +9,7 @@ import type { AppError } from '../result/AppError'
  * phát effect, và biết mình đã bị huỷ hay chưa. Không có `router`, không có
  * `setTimeout` tự do, không có đường vòng ra ngoài.
  */
-export interface IntentContext<S, E> {
+export interface IntentContext<S, E, I = never> {
   /**
    * Bị huỷ khi ViewModel bị dispose, hoặc khi một intent mới cùng khoá tới.
    * Truyền vào `fetch(url, { signal })` để công việc dở dang dừng theo.
@@ -19,6 +19,18 @@ export interface IntentContext<S, E> {
   /** Cập nhật bất biến. Không sửa tại chỗ. */
   setState(reducer: (current: S) => S): void
   emit(effect: E): void
+  /**
+   * Bắn một intent vào chính ViewModel này — đi đúng đường `onIntent`, nên
+   * nhận đúng khoá gộp của intent đó.
+   *
+   * Dành cho một luồng sống lâu (theo dõi thiết bị) cần kích một việc thuộc
+   * KHOÁ KHÁC (nạp app cho máy vừa tự chọn): việc đó phải huỷ được bởi thao
+   * tác người dùng cùng khoá, mà luồng thì không được chết theo. Không có
+   * `dispatch`, cách còn lại là giữ một `AbortController` con rồi tự huỷ tay —
+   * đúng cái luật 6 cấm. Không dùng để gọi dây chuyền trong `handleIntent`
+   * thường: ở đó gọi thẳng hàm là đủ và dễ theo dõi hơn.
+   */
+  dispatch(intent: I): void
 }
 
 /**
@@ -41,7 +53,7 @@ export interface ViewModelDefinition<S, I, E, D> {
    * Ngoại lệ ném ra từ đây được bắt và quy về `AppError`; huỷ (AbortError)
    * được bỏ qua chứ không coi là lỗi.
    */
-  handleIntent(intent: I, ctx: IntentContext<S, E>, deps: D): void | Promise<void>
+  handleIntent(intent: I, ctx: IntentContext<S, E, I>, deps: D): void | Promise<void>
 
   /**
    * Khoá gộp công việc. Hai intent cùng khoá thì cái mới huỷ cái cũ.
@@ -56,7 +68,7 @@ export interface ViewModelDefinition<S, I, E, D> {
    * Xử lý lỗi tập trung. Thường là `ctx.setState` để hiện lỗi, hoặc
    * `ctx.emit` để bật snackbar. Bỏ trống thì lỗi chỉ được ghi ra console.
    */
-  onError?(error: AppError, intent: I, ctx: IntentContext<S, E>, deps: D): void
+  onError?(error: AppError, intent: I, ctx: IntentContext<S, E, I>, deps: D): void
 
   /**
    * Chạy một lần khi ViewModel khởi động (`start()`). Nơi nạp dữ liệu ban đầu.
@@ -64,7 +76,7 @@ export interface ViewModelDefinition<S, I, E, D> {
    * Có thể trả `Promise` — một luồng mở ở đây (logcat, mirror) sống tới khi
    * bị huỷ, và chỉ huỷ được nếu khai `startKey`.
    */
-  onStart?(ctx: IntentContext<S, E>, deps: D): void | Promise<void>
+  onStart?(ctx: IntentContext<S, E, I>, deps: D): void | Promise<void>
 
   /**
    * Khoá gộp của job `onStart`, cùng không gian tên với `intentKey`.

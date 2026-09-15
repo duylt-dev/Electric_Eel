@@ -41,7 +41,7 @@ export function createViewModel<S, I, E, D>(
   let disposed = false
   let started = false
 
-  const makeContext = (signal: AbortSignal): IntentContext<S, E> => ({
+  const makeContext = (signal: AbortSignal): IntentContext<S, E, I> => ({
     signal,
     getState: () => store.getState(),
     setState: (reducer) => {
@@ -54,11 +54,13 @@ export function createViewModel<S, I, E, D>(
       if (disposed) return
       effects.emit(effect)
     },
+    // `instance` khai bên dưới nhưng chỉ được gọi tới sau khi đã dựng xong.
+    dispatch: (intent) => instance.onIntent(intent),
   })
 
   const run = (
     intent: I | null,
-    body: (ctx: IntentContext<S, E>) => void | Promise<void>,
+    body: (ctx: IntentContext<S, E, I>) => void | Promise<void>,
     startKey?: string,
   ): void => {
     if (disposed) return
@@ -103,7 +105,7 @@ export function createViewModel<S, I, E, D>(
   const reportFailure = (
     thrown: unknown,
     intent: I | null,
-    ctx: IntentContext<S, E>,
+    ctx: IntentContext<S, E, I>,
     signal: AbortSignal,
   ): void => {
     // Huỷ là kết quả bình thường của điều hướng hoặc gõ phím liên tiếp.
