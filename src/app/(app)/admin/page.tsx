@@ -37,7 +37,6 @@ export default async function AdminPage() {
       <PageHeader
         eyebrow="Quản trị"
         title="Tài khoản và project"
-        subtitle="Thêm project Firebase, gắn service account, và quyết định ai được sửa app nào."
         meta={
           <>
             <MetaChip label="project">{apps.ok ? apps.value.length : '—'}</MetaChip>

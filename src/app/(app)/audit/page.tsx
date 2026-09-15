@@ -69,11 +69,6 @@ export default async function AuditPage() {
       <PageHeader
         eyebrow="Nhật ký"
         title="Thao tác gần đây"
-        subtitle={
-          user.value.role === 'ADMIN'
-            ? 'Toàn bộ thao tác của mọi người trên mọi app, mới nhất trước.'
-            : 'Thao tác của chính bạn, mới nhất trước.'
-        }
         meta={
           <>
             <MetaChip label="bản ghi">{entries.value.length}</MetaChip>

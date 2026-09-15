@@ -182,11 +182,6 @@ export function ConfigEditorScreen({ appName, projectId, canEdit, canPublish }: 
       <PageHeader
         eyebrow="Remote Config"
         title={appName}
-        subtitle={
-          readOnly
-            ? 'Bạn chỉ có quyền xem app này. Sửa được nhưng không đẩy lên được.'
-            : 'Sửa cấu hình quảng cáo bằng biểu mẫu. Mọi thay đổi chỉ nằm ở máy bạn cho tới khi bấm đẩy lên.'
-        }
         meta={
           <>
             <MetaChip label="project">{projectId}</MetaChip>
@@ -210,7 +205,7 @@ export function ConfigEditorScreen({ appName, projectId, canEdit, canPublish }: 
             >
               Tải lại
             </Button>
-            <Button
+            <Button size="small"
               variant="contained"
               onClick={() => setDiffOpen(true)}
               disabled={!dirty || !canPublish || state.publishing}

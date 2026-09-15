@@ -88,7 +88,6 @@ export function StringTranslatorScreen() {
       <PageHeader
         eyebrow="Dịch"
         title="strings.xml đa ngôn ngữ"
-        subtitle="Nạp một tệp strings.xml, chọn ngôn ngữ, nhận về một tệp .zip đã xếp sẵn theo đúng cấu trúc thư mục values-xx của Android."
         meta={
           <>
             <MetaChip label="mô hình">{providerLabel(state.settings)}</MetaChip>

@@ -31,11 +31,6 @@ export default async function RemoteConfigIndexPage() {
         <PageHeader
           eyebrow="Remote Config"
           title="Chưa có app nào"
-          subtitle={
-            user.value.role === 'ADMIN'
-              ? 'Vào mục Quản trị để thêm project Firebase đầu tiên.'
-              : 'Nhờ quản trị viên cấp quyền cho bạn trên một app.'
-          }
         />
         <Stack spacing={4} sx={{ alignItems: 'center', py: 16, textAlign: 'center' }}>
           <CloudOffIcon sx={{ fontSize: 44, color: m3('outline') }} />
@@ -54,7 +49,6 @@ export default async function RemoteConfigIndexPage() {
       <PageHeader
         eyebrow="Remote Config"
         title="Chọn app"
-        subtitle="Mỗi app là một project Firebase. Chọn một app để sửa cấu hình quảng cáo của nó bằng biểu mẫu thay vì gõ JSON."
         meta={
           <>
             <MetaChip label="app">{apps.value.length}</MetaChip>

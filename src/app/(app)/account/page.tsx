@@ -16,7 +16,6 @@ export default async function AccountPage() {
       <PageHeader
         eyebrow="Tài khoản"
         title={user.name}
-        subtitle="Thông tin tài khoản nội bộ của bạn và chỗ đổi mật khẩu."
         meta={
           <>
             <MetaChip label="email">{user.email}</MetaChip>

@@ -67,7 +67,6 @@ export default async function AppAdminPage({ params }: PageProps) {
       <PageHeader
         eyebrow="Quản trị · Project"
         title={app.displayName}
-        subtitle="Service account quyết định công cụ đọc và ghi được gì; phân quyền quyết định ai làm được việc đó."
         meta={
           <>
             <MetaChip label="project">{app.projectId}</MetaChip>

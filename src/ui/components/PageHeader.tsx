@@ -8,36 +8,35 @@ import { m3 } from '../theme/m3Tokens'
 /**
  * Đầu trang dùng chung cho mọi công cụ.
  *
- * Bốn tầng, đọc từ trên xuống theo đúng thứ tự người ta cần:
+ * Hai tầng, cố ý thấp:
  *
- *   eyebrow   đang ở đâu trong hệ thống — chữ đơn cách nhỏ, có một vạch màu dẫn
- *   title     trang này là gì — chữ tiêu đề
- *   subtitle  vì sao nó tồn tại — một câu, không quá 60 ký tự một dòng
- *   meta      những con số đọc lướt là biết — hàng viên thông tin
+ *   eyebrow            đang ở đâu trong hệ thống — chữ đơn cách nhỏ, có vạch màu dẫn
+ *   title · meta · actions   trang này là gì, vài con số đọc lướt, và nút — MỘT hàng
  *
- * Cố ý là chữ trần, KHÔNG bọc trong thẻ kính. Đầu trang chỉ nói người dùng
- * đang ở đâu; việc họ vào trang để làm nằm ở bảng, danh sách hay khung phía
- * dưới, và những thứ đó đã có khung riêng. Bọc thêm một lớp viền + đệm là mất
- * ngót trăm pixel chiều cao ở mọi trang cho một cái hộp không chứa gì để thao
- * tác. Muốn đầu trang nổi hơn thì sửa chữ, đừng thêm khung.
+ * Từng có tầng `subtitle` ("vì sao trang này tồn tại") và hàng meta riêng. Bỏ
+ * cả hai: người dùng nội bộ vào một công cụ hàng chục lần mỗi ngày, đọc câu mô
+ * tả đúng một lần rồi từ đó nó chỉ chiếm chỗ — ở màn logcat và mirror, ~80px
+ * đầu trang là hai-ba dòng log hoặc một phần màn điện thoại. Việc *trang làm
+ * gì* đã nói ở menu bên trái và ở chính nội dung phía dưới.
  *
- * Gom thành một component thay vì mỗi trang tự dựng: thêm công cụ thứ hai thì
- * nó giống công cụ thứ nhất mà không ai phải nhớ khoảng cách bao nhiêu, và sửa
- * bố cục đầu trang là sửa một chỗ.
+ * Cố ý là chữ trần, KHÔNG bọc trong thẻ kính — bọc thêm viền + đệm là mất ngót
+ * trăm pixel cho một cái hộp không chứa gì để thao tác.
+ *
+ * Nút trong `actions` nên là `size="small"`: hàng này đứng ngang tiêu đề, nút
+ * cỡ thường cao hơn chữ tiêu đề và kéo cả hàng lên theo.
  */
 export interface PageHeaderProps {
   eyebrow: string
   title: ReactNode
-  subtitle?: ReactNode
-  /** Hàng viên thông tin — thường là `<MetaChip>`. */
+  /** Viên thông tin — thường là `<MetaChip>` / `<StatusChip>` — đứng ngay sau tiêu đề. */
   meta?: ReactNode
-  /** Nút bấm nằm bên phải tiêu đề. Xuống dòng khi màn hình hẹp. */
+  /** Nút bấm, đẩy về mép phải của cùng hàng. Xuống dòng khi màn hình hẹp. */
   actions?: ReactNode
 }
 
-export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHeaderProps) {
+export function PageHeader({ eyebrow, title, meta, actions }: PageHeaderProps) {
   return (
-    <Box component="header" sx={{ mb: 4 }}>
+    <Box component="header" sx={{ mb: 3 }}>
       <Typography
         component="p"
         variant="caption"
@@ -46,7 +45,7 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
           display: 'flex',
           alignItems: 'center',
           gap: 2,
-          mb: 1.5,
+          mb: 1,
           fontWeight: 650,
           // Vạch màu trước nhãn: đủ để mắt bám vào đầu trang mà không cần thêm
           // một khối màu lớn nào khác.
@@ -56,32 +55,25 @@ export function PageHeader({ eyebrow, title, subtitle, meta, actions }: PageHead
         {eyebrow}
       </Typography>
 
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        sx={{ alignItems: { md: 'flex-end' }, justifyContent: 'space-between', gap: 3 }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          {/* Vẫn là <h1> của trang (đọc màn hình, SEO nội bộ), chỉ vẽ ở cỡ
-              headline để không chiếm hai dòng ngay đầu trang. */}
-          <Typography component="h1" variant="h3" sx={{ mb: subtitle === undefined ? 0 : 1 }}>
-            {title}
-          </Typography>
-          {subtitle === undefined ? null : (
-            <Typography sx={{ color: m3('onSurfaceVariant'), maxWidth: '62ch' }}>{subtitle}</Typography>
-          )}
-        </Box>
+      <Stack direction="row" sx={{ flexWrap: 'wrap', alignItems: 'center', columnGap: 3, rowGap: 2 }}>
+        {/* Vẫn là <h1> của trang (đọc màn hình), chỉ vẽ ở cỡ headline-small để
+            đứng vừa một hàng với chip và nút. */}
+        <Typography component="h1" variant="h4" sx={{ minWidth: 0, mr: 1 }}>
+          {title}
+        </Typography>
+
+        {meta === undefined ? null : (
+          <Stack direction="row" sx={{ flexWrap: 'wrap', alignItems: 'center', gap: 1.5 }}>
+            {meta}
+          </Stack>
+        )}
+
         {actions === undefined ? null : (
-          <Stack direction="row" sx={{ gap: 2, flexShrink: 0, alignItems: 'center' }}>
+          <Stack direction="row" sx={{ gap: 1.5, alignItems: 'center', ml: 'auto' }}>
             {actions}
           </Stack>
         )}
       </Stack>
-
-      {meta === undefined ? null : (
-        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 2, mt: 2.5 }}>
-          {meta}
-        </Stack>
-      )}
     </Box>
   )
 }

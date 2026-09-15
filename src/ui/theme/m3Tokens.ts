@@ -210,6 +210,31 @@ export const m3Elevation = [
 export const m3State = { hover: 0.08, focus: 0.1, pressed: 0.1, dragged: 0.16 } as const
 
 /**
+ * Chuyển động. Một bộ đường cong và thời lượng dùng chung, để mọi thứ trong
+ * app chuyển cùng một "tay" — mỗi chỗ tự chọn một `ease` thì tổng thể trông
+ * như lắp ghép.
+ *
+ *   spring   đường cong iOS: vào nhanh, ra rất chậm — thứ tạo cảm giác "có
+ *            quán tính" mà không cần physics thật. Dùng cho thứ DI CHUYỂN hay
+ *            đổi kích thước (cột, ngăn, tấm).
+ *   standard đường cong M3 cho thứ ĐỔI TRẠNG THÁI tại chỗ (màu, mờ).
+ *
+ * Thời lượng theo quãng đường: cái gì đi xa (cột 236px) thì lâu hơn cái đổi
+ * màu. Quá 400ms người dùng bắt đầu chờ; dưới 150ms mắt không kịp thấy là
+ * chuyển, chỉ thấy nhảy.
+ *
+ * `reduced` là chuỗi selector để tắt chuyển động khi người dùng bật "giảm
+ * chuyển động" trong hệ điều hành — bỏ qua thì với họ đây là lỗi tiếp cận,
+ * không phải sở thích.
+ */
+export const motion = {
+  spring: 'cubic-bezier(0.32, 0.72, 0, 1)',
+  standard: 'cubic-bezier(0.2, 0, 0, 1)',
+  duration: { fast: 160, base: 260, slow: 380 },
+  reduced: '@media (prefers-reduced-motion: reduce)',
+} as const
+
+/**
  * Phát lại các stack chữ ở đây để mọi nơi trong app chỉ nhập từ một cửa duy
  * nhất. Dùng `MONO_FONT_STACK` chứ đừng viết `fontFamily: 'monospace'`: từ khoá
  * đó lấy phông đơn cách mặc định của hệ điều hành, nên trên máy khác trông là

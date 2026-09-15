@@ -42,7 +42,6 @@ export default async function ConfigEditorPage({ params }: PageProps) {
         <PageHeader
           eyebrow="Remote Config"
           title={app.displayName}
-          subtitle="Chưa nối được với Firebase, nên chưa có gì để sửa."
           meta={<MetaChip label="project">{app.projectId}</MetaChip>}
         />
         <Stack spacing={4} sx={{ maxWidth: 720 }}>
