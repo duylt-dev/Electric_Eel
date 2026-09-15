@@ -1,4 +1,5 @@
 import { AppErrors, type Result, err, ok } from '../../../core/result'
+import { delay } from '../../../core/util/concurrency'
 import type { AdbShell } from '../repositories/AdbShell'
 import { clearLogcatBuffer, resolveAppPid } from './adbCommands'
 
@@ -63,24 +64,6 @@ const SETTLE_MS = 350
 /** Số lần logcat thoát ngay lập tức liên tiếp trước khi kết luận là hỏng thật. */
 const MAX_IMMEDIATE_FAILURES = 3
 const IMMEDIATE_MS = 800
-
-function delay(ms: number, signal: AbortSignal): Promise<boolean> {
-  return new Promise((resolve) => {
-    if (signal.aborted) {
-      resolve(false)
-      return
-    }
-    const onAbort = (): void => {
-      clearTimeout(timer)
-      resolve(false)
-    }
-    const timer = setTimeout(() => {
-      signal.removeEventListener('abort', onAbort)
-      resolve(true)
-    }, ms)
-    signal.addEventListener('abort', onAbort, { once: true })
-  })
-}
 
 export async function followAppLogcat(
   deps: FollowAppLogcatDeps,

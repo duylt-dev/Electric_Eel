@@ -16,6 +16,10 @@ import type { AdbDevice } from '@/domain/adb/entities/AdbDevice'
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
+/**
+ * `failed` = luồng theo dõi máy đứt hoặc adb không trả lời. Danh sách đang có
+ * vẫn hiện — nó đúng cho tới khi có tin mới — kèm một nút mở lại luồng.
+ */
 export type DeviceListStatus = 'loading' | 'ready' | 'failed'
 
 /** `idle` = chưa chọn máy nào, nên chưa có gì để hỏi. */
@@ -72,8 +76,17 @@ export const initialLogcatPickerState: LogcatPickerState = {
 // ─── Intent ─────────────────────────────────────────────────────────────────
 
 export type LogcatPickerIntent =
+  /**
+   * Mở lại luồng theo dõi thiết bị sau khi nó đứt. Bình thường không cần: máy
+   * cắm vào là luồng tự báo, không có nút "quét lại" nào để bấm.
+   */
   | { type: 'DevicesRefreshRequested' }
-  | { type: 'DeviceSelected'; serial: string }
+  /**
+   * `serial` là `null` khi máy đang chọn không còn dùng được (rút cáp, rớt
+   * mạng): danh sách app của nó phải bỏ, và lượt nạp đang bay phải huỷ. Màn
+   * hình chỉ bắn chuỗi; `null` là do luồng theo dõi máy tự bắn.
+   */
+  | { type: 'DeviceSelected'; serial: string | null }
   | { type: 'PackagesRefreshRequested' }
   /**
    * Bấm vào một app trong danh sách.

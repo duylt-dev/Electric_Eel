@@ -1,5 +1,6 @@
 import { AppErrors, type Result, err, ok } from '../../core/result'
 import type { AdbDevice } from '../../domain/adb/entities/AdbDevice'
+import type { DeviceWatchEvent } from '../../domain/adb/entities/DeviceWatchEvent'
 import type { LogcatEvent, LogcatRequest } from '../../domain/adb/entities/LogcatSession'
 import type { PackageLabelEvent } from '../../domain/adb/entities/PackageLabelEvent'
 import type { AdbRepository } from '../../domain/adb/repositories/AdbRepository'
@@ -49,6 +50,26 @@ export class HttpAdbRepository implements AdbRepository {
   async listDevices(signal?: AbortSignal): Promise<Result<AdbDevice[]>> {
     const body = await request<{ devices: AdbDevice[] }>('/devices', { method: 'GET' }, signal)
     return body.ok ? ok(body.value.devices) : body
+  }
+
+  async watchDevices(
+    onEvent: (event: DeviceWatchEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Result<void>> {
+    let response: Response
+    try {
+      response = await fetch(`${BASE}/devices/stream`, {
+        method: 'GET',
+        headers: { Accept: 'application/x-ndjson' },
+        cache: 'no-store',
+        signal,
+      })
+    } catch (thrown) {
+      if (signal.aborted) return err(AppErrors.cancelled('Đã dừng theo dõi thiết bị.'))
+      return err(AppErrors.network('Không kết nối được tới máy chủ.', { cause: thrown }))
+    }
+    if (!response.ok) return err(await toAppErrorFromResponse(response))
+    return readNdjson<DeviceWatchEvent>(response, onEvent, signal)
   }
 
   async listPackages(serial: string, signal?: AbortSignal): Promise<Result<string[]>> {

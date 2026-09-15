@@ -4,6 +4,7 @@ import { describe, it } from 'node:test'
 import { createViewModel } from '@/core/mvi/createViewModel'
 import { AppErrors, type Result, err, ok } from '@/core/result'
 import type { AdbDevice } from '@/domain/adb/entities/AdbDevice'
+import type { DeviceWatchEvent } from '@/domain/adb/entities/DeviceWatchEvent'
 import type { PackageLabelEvent } from '@/domain/adb/entities/PackageLabelEvent'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
 import { LogcatPickerViewModel } from './LogcatPickerViewModel'
@@ -23,6 +24,16 @@ class FakeAdb implements AdbRepository {
 
   async listDevices(): Promise<Result<AdbDevice[]>> {
     return ok([{ serial: 'A', state: 'device', model: 'SM-A165F', product: null }])
+  }
+  /** Báo một máy rồi giữ luồng mở như máy chủ thật — chỉ về khi bị huỷ. */
+  async watchDevices(
+    onEvent: (event: DeviceWatchEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Result<void>> {
+    const devices = await this.listDevices()
+    if (devices.ok) onEvent({ type: 'devices', devices: devices.value })
+    await new Promise<void>((resolve) => signal.addEventListener('abort', () => resolve(), { once: true }))
+    return err(AppErrors.cancelled('Đã dừng.'))
   }
   async listPackages(): Promise<Result<string[]>> {
     return ok(['com.a', 'com.b', 'com.c'])
@@ -99,6 +110,94 @@ describe('LogcatPickerViewModel — nhãn app', () => {
     await settle()
     assert.equal(vm.store.getState().selectedSerial, 'B')
     assert.equal(adb.labelSignals.length, 2)
+    vm.dispose()
+  })
+})
+
+/**
+ * Fake mà TEST điều khiển được luồng thiết bị: đẩy từng sự kiện bằng `push`
+ * để dựng kịch bản cắm / rút cáp trong lúc app đang nạp.
+ */
+class ScriptedAdb extends FakeAdb {
+  private emit: ((event: DeviceWatchEvent) => void) | null = null
+
+  override async watchDevices(
+    onEvent: (event: DeviceWatchEvent) => void,
+    signal: AbortSignal,
+  ): Promise<Result<void>> {
+    this.emit = onEvent
+    await new Promise<void>((resolve) => signal.addEventListener('abort', () => resolve(), { once: true }))
+    return err(AppErrors.cancelled('Đã dừng.'))
+  }
+  push(event: DeviceWatchEvent): void {
+    this.emit?.(event)
+  }
+}
+
+const device = (serial: string, state: AdbDevice['state'] = 'device'): AdbDevice => ({
+  serial,
+  state,
+  model: null,
+  product: null,
+})
+
+describe('LogcatPickerViewModel — theo dõi thiết bị', () => {
+  it('cắm máy là tự chọn và nạp app; rút máy là bỏ chọn và bỏ danh sách', async () => {
+    const adb = new ScriptedAdb([{ type: 'done' }])
+    const vm = createViewModel(LogcatPickerViewModel.definition, { adb })
+    vm.start()
+    await settle()
+    assert.equal(vm.store.getState().status, 'loading')
+
+    adb.push({ type: 'devices', devices: [] })
+    assert.equal(vm.store.getState().status, 'ready')
+    assert.equal(vm.store.getState().selectedSerial, null)
+
+    adb.push({ type: 'devices', devices: [device('A')] })
+    await settle()
+    assert.equal(vm.store.getState().selectedSerial, 'A')
+    assert.deepEqual(vm.store.getState().packageNames, ['com.a', 'com.b', 'com.c'])
+
+    adb.push({ type: 'devices', devices: [] })
+    await settle()
+    assert.equal(vm.store.getState().selectedSerial, null)
+    assert.deepEqual(vm.store.getState().packageNames, [])
+    assert.equal(vm.store.getState().packagesStatus, 'idle')
+    vm.dispose()
+  })
+
+  it('chọn máy KHÔNG làm chết luồng theo dõi: sự kiện sau đó vẫn vào state', async () => {
+    const adb = new ScriptedAdb([{ type: 'done' }])
+    const vm = createViewModel(LogcatPickerViewModel.definition, { adb })
+    vm.start()
+    await settle()
+    adb.push({ type: 'devices', devices: [device('A'), device('B')] })
+    assert.equal(vm.store.getState().selectedSerial, null)
+
+    vm.onIntent({ type: 'DeviceSelected', serial: 'B' })
+    await settle()
+    assert.equal(vm.store.getState().selectedSerial, 'B')
+
+    adb.push({ type: 'devices', devices: [device('A'), device('B', 'offline')] })
+    await settle()
+    // Máy đang chọn rớt → tự chọn A vì chỉ còn một máy dùng được.
+    assert.equal(vm.store.getState().selectedSerial, 'A')
+    assert.equal(vm.store.getState().devices.length, 2)
+    vm.dispose()
+  })
+
+  it('lỗi một nhịp thì đỏ khối thiết bị nhưng danh sách cũ vẫn giữ', async () => {
+    const adb = new ScriptedAdb([{ type: 'done' }])
+    const vm = createViewModel(LogcatPickerViewModel.definition, { adb })
+    vm.start()
+    await settle()
+    adb.push({ type: 'devices', devices: [device('A')] })
+    adb.push({ type: 'failed', message: 'adb lỡ nhịp' })
+
+    const state = vm.store.getState()
+    assert.equal(state.status, 'failed')
+    assert.equal(state.error?.message, 'adb lỡ nhịp')
+    assert.equal(state.devices.length, 1)
     vm.dispose()
   })
 })

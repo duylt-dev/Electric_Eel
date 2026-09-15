@@ -1,7 +1,8 @@
 import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
+import { AppErrors } from '@/core/result'
 import { clientContainer } from '@/di/client'
-import { autoSelectDevice, isUsable } from '@/domain/adb/entities/AdbDevice'
+import { autoSelectDevice } from '@/domain/adb/entities/AdbDevice'
 import { isSafePackageName } from '@/domain/adb/entities/AndroidPackage'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
 import { initialLogcatPickerState } from './LogcatPickerContract'
@@ -16,12 +17,23 @@ import type {
  *
  * Không một dòng React nào trong file này — luật ESLint chặn nếu ai đó thêm
  * vào. Điều hướng sang màn log là một Effect, không phải `router.push`.
+ *
+ * Hai khoá công việc, vì hai vòng đời khác nhau:
+ *
+ *   `devices`  — luồng theo dõi máy, mở ở `onStart` và sống suốt màn hình.
+ *   `packages` — nạp app của máy đang chọn: ngắn, và lượt mới huỷ lượt cũ.
+ *
+ * Gộp chung một khoá như trước thì bấm chọn máy là luồng theo dõi chết theo,
+ * và từ đó cắm cáp không còn ai thấy.
  */
 export interface LogcatPickerDeps {
   adb: AdbRepository
 }
 
-type Context = IntentContext<LogcatPickerState, LogcatPickerEffect>
+type Context = IntentContext<LogcatPickerState, LogcatPickerEffect, LogcatPickerIntent>
+
+const DEVICES_KEY = 'devices'
+const PACKAGES_KEY = 'packages'
 
 /** Máy đổi thì danh sách app lẫn nhãn của máy cũ đều bỏ — nhãn theo APK, không theo tên. */
 const EMPTY_PACKAGES = {
@@ -32,58 +44,59 @@ const EMPTY_PACKAGES = {
   labelsMessage: null,
 }
 
-async function loadDevices(ctx: Context, deps: LogcatPickerDeps, announce: boolean): Promise<void> {
+/**
+ * Theo dõi máy cắm vào máy chủ cho tới khi màn hình rời đi.
+ *
+ * Mỗi lần danh sách đổi, tự chọn máy như `autoSelectDevice` quy định. Chọn
+ * xong KHÔNG nạp app tại đây mà `dispatch` một `DeviceSelected`: việc nạp
+ * thuộc khoá `packages`, để người dùng bấm chọn máy khác là lượt nạp cũ bị
+ * huỷ — còn luồng này thì không được chết theo cú bấm đó.
+ */
+async function watch(ctx: Context, deps: LogcatPickerDeps): Promise<void> {
   ctx.setState((state) => ({ ...state, status: 'loading', error: null }))
 
-  const devices = await deps.adb.listDevices(ctx.signal)
-  if (ctx.signal.aborted) return
+  const outcome = await deps.adb.watchDevices((event) => {
+    if (ctx.signal.aborted) return
 
-  if (!devices.ok) {
-    ctx.setState((state) => ({ ...state, status: 'failed', error: devices.error }))
-    return
-  }
+    if (event.type === 'failed') {
+      ctx.setState((state) => ({ ...state, status: 'failed', error: AppErrors.upstream(event.message) }))
+      return
+    }
 
-  const previousSerial = ctx.getState().selectedSerial
-  const nextSerial = autoSelectDevice(devices.value, previousSerial)
-  const changed = nextSerial !== previousSerial
+    const previousSerial = ctx.getState().selectedSerial
+    const nextSerial = autoSelectDevice(event.devices, previousSerial)
 
-  ctx.setState((state) => ({
-    ...state,
-    status: 'ready',
-    devices: devices.value,
-    selectedSerial: nextSerial,
+    ctx.setState((state) => ({
+      ...state,
+      status: 'ready',
+      error: null,
+      devices: event.devices,
+      selectedSerial: nextSerial,
+    }))
+
     // Máy đã đổi thì danh sách app cũ không còn đúng nữa. Giữ lại nó sẽ khiến
     // người dùng bấm vào một app không có trên máy đang chọn.
-    ...(changed ? { ...EMPTY_PACKAGES } : {}),
+    if (nextSerial !== previousSerial) ctx.dispatch({ type: 'DeviceSelected', serial: nextSerial })
+  }, ctx.signal)
+  if (ctx.signal.aborted) return
+
+  // Luồng chỉ kết thúc khi bị huỷ; về tới đây mà chưa huỷ là máy chủ đã đóng
+  // nó (deploy lại, mất mạng). Nói ra để có nút mở lại.
+  ctx.setState((state) => ({
+    ...state,
+    status: 'failed',
+    error: outcome.ok ? AppErrors.network('Mất kết nối theo dõi thiết bị.') : outcome.error,
   }))
-
-  if (announce) {
-    const usable = devices.value.filter(isUsable).length
-    ctx.emit({
-      type: 'ShowMessage',
-      severity: usable === 0 ? 'info' : 'success',
-      message:
-        usable === 0
-          ? 'Không thấy thiết bị nào. Cắm máy qua USB và bật gỡ lỗi USB.'
-          : `Thấy ${usable} thiết bị sẵn sàng.`,
-    })
-  }
-
-  // Chỉ nạp app khi chưa có gì để hiện. Bấm làm mới thiết bị không phải là bấm
-  // làm mới danh sách app — hai việc có nút riêng vì chúng tốn khác nhau.
-  if (nextSerial !== null && ctx.getState().packagesStatus === 'idle') {
-    await loadPackages(ctx, deps, nextSerial)
-  }
 }
 
 async function loadPackages(ctx: Context, deps: LogcatPickerDeps, serial: string): Promise<void> {
-  ctx.setState((state) => ({ ...state, packagesStatus: 'loading', error: null }))
+  ctx.setState((state) => ({ ...state, packagesStatus: 'loading' }))
 
   const packages = await deps.adb.listPackages(serial, ctx.signal)
   if (ctx.signal.aborted) return
 
   if (!packages.ok) {
-    ctx.setState((state) => ({ ...state, packagesStatus: 'failed', error: packages.error }))
+    ctx.setState((state) => ({ ...state, packagesStatus: 'failed' }))
     ctx.emit({ type: 'ShowMessage', severity: 'error', message: packages.error.message })
     return
   }
@@ -142,31 +155,35 @@ export const LogcatPickerViewModel = defineViewModel<
 
   initialState: () => initialLogcatPickerState,
 
-  // Hỏi adb ngay khi màn hình dựng lên: danh sách thiết bị là thứ người dùng
-  // tới đây để xem, không phải thứ họ phải bấm mới thấy.
-  onStart: (ctx, deps) => loadDevices(ctx, deps, false),
-  // Bấm "Làm mới" trong lúc lượt nạp đầu còn bay thì lượt đầu bị huỷ, không chạy đua.
-  startKey: 'adb',
+  // Mở luồng theo dõi ngay khi màn hình dựng lên: danh sách thiết bị là thứ
+  // người dùng tới đây để xem, và cắm cáp là phải thấy chứ không phải bấm.
+  onStart: watch,
+  // Luồng mở ở `onStart` phải huỷ được bởi "Thử lại" — cùng khoá `devices`.
+  startKey: DEVICES_KEY,
 
-  /**
-   * Mọi lượt hỏi adb dùng CHUNG một khoá.
-   *
-   * Chúng đọc và ghi cùng một vùng state (danh sách thiết bị, danh sách app),
-   * nên hai lượt chạy song song sẽ ghi đè lẫn nhau theo thứ tự về đích chứ
-   * không theo thứ tự bấm. Dùng chung khoá thì lượt mới huỷ lượt cũ, và thứ
-   * hiển thị luôn là kết quả của thao tác cuối cùng.
-   */
-  intentKey: (intent) => (intent.type === 'AppOpened' ? undefined : 'adb'),
+  intentKey: (intent) => {
+    switch (intent.type) {
+      case 'DevicesRefreshRequested':
+        return DEVICES_KEY
+      case 'DeviceSelected':
+      case 'PackagesRefreshRequested':
+        return PACKAGES_KEY
+      case 'AppOpened':
+        return undefined
+    }
+  },
 
   async handleIntent(intent, ctx, deps) {
     switch (intent.type) {
       case 'DevicesRefreshRequested':
-        await loadDevices(ctx, deps, true)
+        await watch(ctx, deps)
         return
 
       case 'DeviceSelected': {
         ctx.setState((state) => ({ ...state, selectedSerial: intent.serial, ...EMPTY_PACKAGES }))
-        await loadPackages(ctx, deps, intent.serial)
+        // `null` = không còn máy nào để hỏi. Chỉ cần tới đây: intent cùng khoá
+        // đã huỷ lượt nạp đang bay của máy cũ.
+        if (intent.serial !== null) await loadPackages(ctx, deps, intent.serial)
         return
       }
 
@@ -204,8 +221,12 @@ export const LogcatPickerViewModel = defineViewModel<
     }
   },
 
-  onError: (error, _intent, ctx) => {
-    ctx.setState((state) => ({ ...state, status: 'failed', error }))
+  onError: (error, intent, ctx) => {
+    // Chỉ lỗi của luồng theo dõi mới đỏ khối thiết bị; lỗi nạp app đã có
+    // snackbar, và `packagesStatus` đã ghi `failed`.
+    if (intent.type === 'DevicesRefreshRequested') {
+      ctx.setState((state) => ({ ...state, status: 'failed', error }))
+    }
     ctx.emit({ type: 'ShowMessage', severity: 'error', message: error.message })
   },
 

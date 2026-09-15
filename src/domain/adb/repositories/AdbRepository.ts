@@ -1,5 +1,6 @@
 import type { Result } from '../../../core/result'
 import type { AdbDevice } from '../entities/AdbDevice'
+import type { DeviceWatchEvent } from '../entities/DeviceWatchEvent'
 import type { LogcatEvent, LogcatRequest } from '../entities/LogcatSession'
 import type { PackageLabelEvent } from '../entities/PackageLabelEvent'
 
@@ -14,6 +15,15 @@ import type { PackageLabelEvent } from '../entities/PackageLabelEvent'
  */
 export interface AdbRepository {
   listDevices(signal?: AbortSignal): Promise<Result<AdbDevice[]>>
+
+  /**
+   * Theo dõi máy cắm vào máy chủ: danh sách mới về mỗi khi nó đổi.
+   *
+   * Thay cho việc gọi `listDevices` rồi bắt người dùng bấm quét lại — cắm cáp
+   * là màn hình phải tự thấy. Chỉ trả về khi luồng kết thúc hoặc bị huỷ;
+   * huỷ bằng `signal` là cách dừng duy nhất.
+   */
+  watchDevices(onEvent: (event: DeviceWatchEvent) => void, signal: AbortSignal): Promise<Result<void>>
 
   /** applicationId của các app CÀI THÊM trên máy. App hệ thống không bao giờ có mặt. */
   listPackages(serial: string, signal?: AbortSignal): Promise<Result<string[]>>

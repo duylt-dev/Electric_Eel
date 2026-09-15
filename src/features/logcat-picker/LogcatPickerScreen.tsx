@@ -12,8 +12,6 @@ import Typography from '@mui/material/Typography'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 
-import { MetaChip } from '@/ui/components/MetaChip'
-import { PageHeader } from '@/ui/components/PageHeader'
 import { SectionHeading } from '@/ui/components/SectionHeading'
 import { m3 } from '@/ui/theme/m3Tokens'
 import { LogcatPickerViewModel } from './LogcatPickerViewModel'
@@ -42,6 +40,10 @@ export interface LogcatPickerScreenProps {
 
 /**
  * Màn chọn thiết bị và app.
+ *
+ * Khối thiết bị không có tiêu đề lẫn nút quét: máy cắm vào là tự hiện, rút ra
+ * là tự biến — luồng theo dõi mở từ lúc vào màn. Thứ duy nhất phải bấm ở khối
+ * đó là chọn máy khi có từ hai máy trở lên.
  *
  * Không chứa logic nghiệp vụ: đọc state qua hook, bắn intent, xử lý Effect.
  * Điều hướng sang màn log đi qua Effect chứ không gọi thẳng router từ chỗ xử
@@ -94,39 +96,25 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Logcat"
-        title="Chọn máy và app"
-        meta={
-          <>
-            <MetaChip label="thiết bị">{usable.length}</MetaChip>
-            {state.packagesStatus === 'ready' && (
-              <MetaChip label="app trên máy">{state.packageNames.length}</MetaChip>
-            )}
-          </>
-        }
-        actions={
-          <Button size="small"
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={() => onIntent({ type: 'DevicesRefreshRequested' })}
-            disabled={state.status === 'loading'}
-          >
-            Làm mới
-          </Button>
-        }
-      />
-
       <Stack spacing={7}>
-        {state.error !== null && state.status === 'failed' && (
-          <Alert severity="error">{state.error.message}</Alert>
-        )}
-
         <Box>
-          <SectionHeading
-            title="Thiết bị"
-            hint="adb chạy trên máy chủ đang phục vụ trang này. Máy nào cắm cáp vào đó thì hiện ở đây."
-          />
+          {state.status === 'failed' && state.error !== null && (
+            <Alert
+              severity="error"
+              sx={{ mb: 3 }}
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={() => onIntent({ type: 'DevicesRefreshRequested' })}
+                >
+                  Thử lại
+                </Button>
+              }
+            >
+              {state.error.message}
+            </Alert>
+          )}
 
           {state.status === 'loading' && state.devices.length === 0 ? (
             <Stack direction="row" sx={{ gap: 3, alignItems: 'center', py: 4 }}>
@@ -136,10 +124,10 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
               </Typography>
             </Stack>
           ) : state.devices.length === 0 ? (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              adb không thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b>. Nhớ rằng adb chạy trên máy
-              chủ đang phục vụ trang này — nếu trang không chạy trên máy của bạn thì máy cắm vào bàn
-              bạn sẽ không hiện ra ở đây.
+            <Alert severity="info">
+              Chưa thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b> — máy sẽ tự hiện ở đây, không cần
+              tải lại trang. adb chạy trên máy chủ đang phục vụ trang này: nếu trang không chạy trên
+              máy của bạn thì máy cắm vào bàn bạn sẽ không hiện ra.
             </Alert>
           ) : (
             <DeviceList
