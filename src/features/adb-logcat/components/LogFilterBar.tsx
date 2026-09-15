@@ -3,22 +3,19 @@
 import ClearIcon from '@mui/icons-material/Clear'
 import SearchIcon from '@mui/icons-material/Search'
 import Box from '@mui/material/Box'
-import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
-import Typography from '@mui/material/Typography'
 
-import { isDefaultFilter } from '@/domain/adb/entities/LogcatFilter'
 import type { LogcatFilter } from '@/domain/adb/entities/LogcatFilter'
-import { LEVEL_LABEL, LOG_LEVELS } from '@/domain/adb/entities/LogcatLine'
+import { LEVEL_LABEL } from '@/domain/adb/entities/LogcatLine'
 import type { LogLevel } from '@/domain/adb/entities/LogcatLine'
 import { m3, m3Mono, m3Shape } from '@/ui/theme/m3Tokens'
 import type { M3ColorRole } from '@/ui/theme/m3Tokens'
 
 /**
- * Bộ lọc: mức, tag, ô tìm chuỗi, và số dòng đang hiện.
+ * Bộ lọc: mức, tag, ô tìm chuỗi.
  *
  * Trả về một Fragment chứ không tự bọc hàng — chủ của nó (màn logcat) xếp
  * nó CÙNG HÀNG với dãy nút luồng và nút cỡ chữ; một hàng duy nhất trên đầu
@@ -27,33 +24,29 @@ import type { M3ColorRole } from '@/ui/theme/m3Tokens'
  * Số bên cạnh mỗi mức là số dòng ĐANG CÓ trong đệm ở mức đó — không phải số
  * dòng đang hiện. Nhờ vậy tắt một mức rồi vẫn thấy mình đang giấu đi bao nhiêu,
  * và không ai đi tìm một lỗi đã bị chính bộ lọc của mình che mất.
+ *
+ * Chỉ có chip cho D/I/W/E. Verbose và Fatal vẫn hiện trong khung log, nhưng
+ * không ai tắt riêng chúng: V gần như không app nào in ra, F thì xuất hiện là
+ * phải nhìn thấy. Hai chip ấy chỉ chiếm chỗ trên hàng nút.
+ *
+ * Không có nút "Bỏ lọc": bộ lọc chỉ có hai ô chữ và bốn chip, tự xoá còn nhanh
+ * hơn đi tìm cái nút.
  */
+const CHIP_LEVELS: readonly LogLevel[] = ['D', 'I', 'W', 'E']
+
 export interface LogFilterBarProps {
   filter: LogcatFilter
   counts: Record<LogLevel, number>
   onToggleLevel: (level: LogLevel) => void
   onTagChange: (value: string) => void
   onQueryChange: (value: string) => void
-  onClear: () => void
-  /** Số dòng còn lại sau khi lọc, và tổng số dòng trong đệm. */
-  shown: number
-  total: number
 }
 
-export function LogFilterBar({
-  filter,
-  counts,
-  onToggleLevel,
-  onTagChange,
-  onQueryChange,
-  onClear,
-  shown,
-  total,
-}: LogFilterBarProps) {
+export function LogFilterBar({ filter, counts, onToggleLevel, onTagChange, onQueryChange }: LogFilterBarProps) {
   return (
     <>
       <Stack direction="row" sx={{ gap: 0.75, alignItems: 'center' }}>
-        {LOG_LEVELS.map((level) => (
+        {CHIP_LEVELS.map((level) => (
           <LevelChip
             key={level}
             level={level}
@@ -115,18 +108,6 @@ export function LogFilterBar({
           },
         }}
       />
-
-      <Typography variant="caption" sx={{ color: m3('onSurfaceVariant'), whiteSpace: 'nowrap' }}>
-        {shown === total
-          ? `${total.toLocaleString('vi-VN')} dòng`
-          : `${shown.toLocaleString('vi-VN')} / ${total.toLocaleString('vi-VN')} dòng`}
-      </Typography>
-
-      {!isDefaultFilter(filter) && (
-        <Button size="small" variant="text" onClick={onClear}>
-          Bỏ lọc
-        </Button>
-      )}
     </>
   )
 }

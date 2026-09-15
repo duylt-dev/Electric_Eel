@@ -6,7 +6,6 @@ import {
   DEFAULT_LOGCAT_FILTER,
   countByLevel,
   filterLines,
-  isDefaultFilter,
   matchesFilter,
   toggleLevel,
 } from './LogcatFilter'
@@ -58,14 +57,6 @@ describe('toggleLevel', () => {
 
     const back = toggleLevel(without, 'D')
     assert.deepEqual(back.levels, [...ALL_LEVELS])
-  })
-})
-
-describe('isDefaultFilter', () => {
-  it('nhận ra bộ lọc chưa ai đụng vào', () => {
-    assert.equal(isDefaultFilter(DEFAULT_LOGCAT_FILTER), true)
-    assert.equal(isDefaultFilter({ ...DEFAULT_LOGCAT_FILTER, query: 'x' }), false)
-    assert.equal(isDefaultFilter(toggleLevel(DEFAULT_LOGCAT_FILTER, 'V')), false)
   })
 })
 

@@ -74,7 +74,10 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
 
   const [fontIndex, setFontIndex] = useLogFontSize()
 
-  const shown = useMemo(() => visibleLines(state), [state])
+  // Phụ thuộc vào đúng hai thứ bộ lọc đọc, không phải cả `state`: mỗi lô log
+  // thay `state` một lần, nhưng bấm tạm dừng hay đổi bám đáy thì không được
+  // lọc lại 5000 dòng.
+  const shown = useMemo(() => visibleLines(state.lines, state.filter), [state.lines, state.filter])
   const counts = useMemo(() => countByLevel(state.lines), [state.lines])
 
   const live = isLive(state)
@@ -126,7 +129,7 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
           )}
 
           {/* MỘT hàng cho mọi nút và bộ lọc: nút luồng · mức · tag · tìm ·
-              số dòng · cỡ chữ · bám đáy. Gói `flexWrap` để màn hẹp vẫn dùng
+              cỡ chữ · bám đáy. Gói `flexWrap` để màn hẹp vẫn dùng
               được, còn trên màn thường thì khung log bắt đầu ngay dưới. */}
           <Stack direction="row" sx={{ gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
             <LogToolbar
@@ -144,12 +147,9 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
             <LogFilterBar
               filter={state.filter}
               counts={counts}
-              shown={shown.length}
-              total={state.lines.length}
               onToggleLevel={(level) => onIntent({ type: 'LevelToggled', level })}
               onTagChange={(value) => onIntent({ type: 'TagFilterChanged', value })}
               onQueryChange={(value) => onIntent({ type: 'QueryChanged', value })}
-              onClear={() => onIntent({ type: 'FilterCleared' })}
             />
 
             <LogViewControls

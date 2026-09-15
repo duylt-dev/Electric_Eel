@@ -1,7 +1,7 @@
 import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
 import { clientContainer } from '@/di/client'
-import { DEFAULT_LOGCAT_FILTER, toggleLevel } from '@/domain/adb/entities/LogcatFilter'
+import { toggleLevel } from '@/domain/adb/entities/LogcatFilter'
 import { parseLogcatLine } from '@/domain/adb/entities/LogcatLine'
 import type { LogcatLine } from '@/domain/adb/entities/LogcatLine'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
@@ -190,10 +190,6 @@ export const AdbLogcatViewModel = defineViewModel<
 
       case 'QueryChanged':
         ctx.setState((state) => ({ ...state, filter: { ...state.filter, query: intent.value } }))
-        return
-
-      case 'FilterCleared':
-        ctx.setState((state) => ({ ...state, filter: DEFAULT_LOGCAT_FILTER }))
         return
 
       case 'AutoScrollChanged':

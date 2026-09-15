@@ -3,7 +3,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import type { ReactNode } from 'react'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { LogLevel, LogcatLine } from '@/domain/adb/entities/LogcatLine'
 import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
@@ -33,6 +33,19 @@ import { MONO_FONT_STACK, m3, m3Shape } from '@/ui/theme/m3Tokens'
  * Ảo hoá đúng cách đòi hỏi biết trước chiều cao mỗi hàng, mà một dòng log có
  * thể dài vài trăm ký tự và xuống dòng thành ba hàng. Đo động thì kéo theo một
  * `ResizeObserver` cho mỗi hàng — đắt hơn chính thứ nó định tối ưu.
+ *
+ * Thay vào đó là `content-visibility: auto` trên từng hàng: trình duyệt tự bỏ
+ * qua layout và vẽ của hàng nằm ngoài tầm nhìn, chỉ giữ một chiều cao ước
+ * lượng (`contain-intrinsic-size`) để thanh cuộn không nhảy. Với 1500 hàng mà
+ * chỉ ~40 hàng đang trong khung, mỗi lô log mới chỉ tốn layout của ~40 hàng ấy.
+ *
+ * ─── Vì sao hàng là thẻ trần, không phải `Box sx` ───
+ *
+ * Một app dùng camera in vài trăm dòng mỗi giây. Mỗi lô tới là React duyệt
+ * lại 1500 hàng; nếu mỗi hàng là bốn `Box sx` thì đó là 6000 lượt tính style
+ * của emotion mỗi 100ms — chính là cái làm tab đứng hình. Style của hàng nằm
+ * MỘT lần ở khung ngoài (selector `& .row`, `& [data-level]`), hàng chỉ mang
+ * className, và `Row` được `memo` nên hàng cũ không vẽ lại khi có hàng mới.
  */
 export const MAX_RENDERED_LINES = 1500
 
@@ -75,6 +88,11 @@ export function LogView({
   const rendered = lines.length > MAX_RENDERED_LINES ? lines.slice(-MAX_RENDERED_LINES) : lines
   const hidden = lines.length - rendered.length
 
+  // Bám theo dòng CUỐI chứ không phải số dòng: khi đệm đã đầy, mỗi lô mới
+  // đẩy một lượt dòng cũ ra khỏi cửa sổ 1500 và số dòng đứng yên — bám theo
+  // số dòng thì bám đáy lặng lẽ ngừng hoạt động đúng lúc log chảy mạnh nhất.
+  const lastSeq = rendered.length === 0 ? -1 : rendered[rendered.length - 1]!.seq
+
   // `useLayoutEffect` chứ không phải `useEffect`: cuộn phải xảy ra trong cùng
   // khung hình với lần vẽ thêm dòng mới. Chậm một khung là mắt thấy giật.
   useLayoutEffect(() => {
@@ -82,7 +100,7 @@ export function LogView({
     const node = containerRef.current
     if (node === null) return
     node.scrollTop = node.scrollHeight
-  }, [rendered.length, autoScroll, frozen])
+  }, [lastSeq, autoScroll, frozen])
 
   // Người dùng cuộn tay: bám đáy tắt khi rời đáy, bật lại khi quay về đáy.
   useEffect(() => {
@@ -114,6 +132,48 @@ export function LogView({
         fontSize: `${String(fontSizeRem)}rem`,
         lineHeight: 1.65,
         py: 0.75,
+
+        '& .row': {
+          display: 'flex',
+          gap: 3,
+          px: 4,
+          py: 0.75,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          borderBottom: `1px solid ${m3('surfaceContainerHigh')}`,
+          contentVisibility: 'auto',
+          // Ước lượng cho một dòng KHÔNG gập: chiều cao thật được nhớ lại sau
+          // lần vẽ đầu (`auto`), nên cuộn ngược lên không giật.
+          containIntrinsicSize: `auto ${String(fontSizeRem * 1.65 + 0.75)}rem`,
+          '&:hover': { backgroundColor: m3('surfaceContainer') },
+        },
+        '& .row[data-severe]': {
+          backgroundColor: m3('errorContainer'),
+          '& .message': { color: m3('onErrorContainer') },
+        },
+        '& .time': { color: m3('outline'), flexShrink: 0 },
+        '& .level': { fontWeight: 700, flexShrink: 0, width: '1ch' },
+        ...Object.fromEntries(
+          (Object.keys(LEVEL_COLOR) as LogLevel[]).map((level) => [
+            `& .row[data-level="${level}"] .level`,
+            { color: LEVEL_COLOR[level] },
+          ]),
+        ),
+        '& .tag': {
+          color: m3('onSurfaceVariant'),
+          flexShrink: 0,
+          width: '18ch',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        },
+        '& .message': { color: m3('onSurface'), minWidth: 0 },
+        '& mark': {
+          borderRadius: '3px',
+          backgroundColor: m3('warningContainer'),
+          color: m3('onWarningContainer'),
+          paddingInline: '2px',
+        },
       }}
     >
       {rendered.length === 0 ? (
@@ -140,62 +200,24 @@ export function LogView({
   )
 }
 
-function Row({ line, searchQuery }: { line: LogcatLine; searchQuery: string }) {
-  const color = LEVEL_COLOR[line.level]
+/**
+ * `memo`: `line` là bất biến và `searchQuery` chỉ đổi khi gõ, nên giữa hai lô
+ * log liên tiếp mọi hàng cũ đều bỏ qua được — chỉ hàng mới được vẽ.
+ */
+const Row = memo(function Row({ line, searchQuery }: { line: LogcatLine; searchQuery: string }) {
   const severe = line.level === 'E' || line.level === 'F'
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        gap: 3,
-        px: 4,
-        py: 0.75,
-        whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
-        borderBottom: `1px solid ${m3('surfaceContainerHigh')}`,
-        backgroundColor: severe ? m3('errorContainer') : 'transparent',
-        '&:hover': { backgroundColor: severe ? m3('errorContainer') : m3('surfaceContainer') },
-      }}
-    >
-      <Box component="span" sx={{ color: m3('outline'), flexShrink: 0 }}>
-        {line.time}
-      </Box>
-      <Box component="span" sx={{ color, fontWeight: 700, flexShrink: 0, width: '1ch' }}>
-        {line.level}
-      </Box>
-      <Box
-        component="span"
-        sx={{
-          color: m3('onSurfaceVariant'),
-          flexShrink: 0,
-          width: '18ch',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}
-        title={line.tag}
-      >
+    <div className="row" data-level={line.level} data-severe={severe ? '' : undefined}>
+      <span className="time">{line.time}</span>
+      <span className="level">{line.level}</span>
+      <span className="tag" title={line.tag}>
         {line.tag}
-      </Box>
-      <Box
-        component="span"
-        sx={{
-          color: severe ? m3('onErrorContainer') : m3('onSurface'),
-          minWidth: 0,
-          '& mark': {
-            borderRadius: '3px',
-            backgroundColor: m3('warningContainer'),
-            color: m3('onWarningContainer'),
-            paddingInline: '2px',
-          },
-        }}
-      >
-        {highlightText(line.message, searchQuery)}
-      </Box>
-    </Box>
+      </span>
+      <span className="message">{highlightText(line.message, searchQuery)}</span>
+    </div>
   )
-}
+})
 
 function highlightText(text: string, query: string): ReactNode {
   const needle = query.trim()
@@ -211,11 +233,7 @@ function highlightText(text: string, query: string): ReactNode {
     if (index > cursor) parts.push(text.slice(cursor, index))
 
     const end = index + needle.length
-    parts.push(
-      <Box key={`${index}-${end}`} component="mark">
-        {text.slice(index, end)}
-      </Box>,
-    )
+    parts.push(<mark key={`${index}-${end}`}>{text.slice(index, end)}</mark>)
     cursor = end
     index = lowerText.indexOf(lowerNeedle, cursor)
   }

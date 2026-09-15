@@ -29,9 +29,6 @@ export const DEFAULT_LOGCAT_FILTER: LogcatFilter = {
   query: '',
 }
 
-export const isDefaultFilter = (filter: LogcatFilter): boolean =>
-  filter.levels.length === ALL_LEVELS.length && filter.tag === '' && filter.query === ''
-
 /** Bật/tắt một mức, giữ nguyên thứ tự chuẩn để hàng chip không nhảy chỗ. */
 export function toggleLevel(filter: LogcatFilter, level: LogLevel): LogcatFilter {
   const next = filter.levels.includes(level)

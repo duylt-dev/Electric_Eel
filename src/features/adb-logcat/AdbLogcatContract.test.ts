@@ -33,7 +33,7 @@ describe('visibleLines', () => {
     }
 
     assert.deepEqual(
-      visibleLines(state).map((entry) => entry.seq),
+      visibleLines(state.lines, state.filter).map((entry) => entry.seq),
       [0, 2],
     )
   })

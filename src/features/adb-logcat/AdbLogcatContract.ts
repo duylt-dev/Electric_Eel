@@ -91,7 +91,6 @@ export type AdbLogcatIntent =
   | { type: 'LevelToggled'; level: LogLevel }
   | { type: 'TagFilterChanged'; value: string }
   | { type: 'QueryChanged'; value: string }
-  | { type: 'FilterCleared' }
   | { type: 'AutoScrollChanged'; value: boolean }
 
 // ─── Effect ─────────────────────────────────────────────────────────────────
@@ -110,8 +109,12 @@ export type AdbLogcatEffect = {
 export const isLive = (state: AdbLogcatState): boolean =>
   state.status === 'streaming' || state.status === 'waiting' || state.status === 'connecting'
 
-export const visibleLines = (state: AdbLogcatState): LogcatLine[] =>
-  filterLines(state.lines, { ...state.filter, query: '' })
+/**
+ * Những dòng đi qua bộ lọc mức và tag. Ô tìm KHÔNG cắt dòng — nó tô sáng chỗ
+ * khớp trong `LogView`, để chuỗi tìm được vẫn đứng giữa ngữ cảnh của nó.
+ */
+export const visibleLines = (lines: readonly LogcatLine[], filter: LogcatFilter): LogcatLine[] =>
+  filterLines(lines, { ...filter, query: '' })
 
 /**
  * Nhập những dòng mới vào đệm, cắt phần vượt trần.
