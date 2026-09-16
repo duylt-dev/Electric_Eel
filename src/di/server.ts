@@ -78,7 +78,7 @@ export const serverContainer = {
     models: new HttpLlmModelCatalog(),
     translatorFor: (provider: LlmProviderName, apiKey: string, model: string) =>
       new LlmStringTranslator(buildProviderConfig(provider, apiKey, model)),
-    options: () => readRuntimeOptions(),
+    options: (provider: LlmProviderName) => readRuntimeOptions(provider),
   },
   /**
    * Công cụ Logcat. `settings` là HÀM vì cùng một lý do như `translation`:

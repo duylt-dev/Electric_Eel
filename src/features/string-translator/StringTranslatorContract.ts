@@ -40,6 +40,21 @@ export interface LanguageProgress {
 }
 
 /**
+ * Một ngôn ngữ đang đứng chờ hạn mức trước khi gọi lại.
+ *
+ * Giữ theo từng ngôn ngữ chứ không phải một cờ chung: sáu ngôn ngữ chạy song
+ * song, cái này vừa xong chờ thì cái kia bắt đầu chờ. Một cờ chung sẽ tắt
+ * ngay khi bất kỳ cái nào chạy tiếp, trong khi năm cái còn lại vẫn đang đứng.
+ */
+export interface RetryWaitProgress {
+  readonly code: string
+  readonly seconds: number
+  readonly attempt: number
+  readonly attempts: number
+  readonly reason: string
+}
+
+/**
  * Phần cấu hình mô hình trong state.
  *
  * Gom thành một nhóm con thay vì rải phẳng vào `StringTranslatorState`: nó có
@@ -90,6 +105,8 @@ export interface StringTranslatorState {
   /** Số ngôn ngữ của lượt đang chạy — chốt lúc bấm dịch, không đổi giữa chừng. */
   readonly running: number
   readonly finished: readonly LanguageProgress[]
+  /** Những ngôn ngữ đang đứng chờ hạn mức. Rỗng là không ai phải chờ. */
+  readonly waiting: readonly RetryWaitProgress[]
 
   /**
    * Tệp zip đã dựng xong, dạng base64.
@@ -132,6 +149,7 @@ export const initialStringTranslatorState: StringTranslatorState = {
   settings: initialModelSettingsState,
   running: 0,
   finished: [],
+  waiting: [],
   archive: null,
   failed: [],
   error: null,

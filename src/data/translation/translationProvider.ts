@@ -101,9 +101,21 @@ export interface TranslationRuntimeOptions {
   readonly chunkTokenLimit: number
   readonly chunkConcurrency: number
   readonly languageConcurrency: number
+  /** Trần lượt gọi mỗi phút cho cả lượt dịch. 0 là không giữ nhịp. */
+  readonly requestsPerMinute: number
   readonly preferNumericEntities: boolean
   readonly escapeApostrophes: boolean
 }
+
+/**
+ * Nhịp gọi mặc định theo nhà cung cấp, đo bằng lượt mỗi phút.
+ *
+ * Gemini bậc miễn phí cho `gemini-2.5-flash` khoảng 10 lượt/phút; để 8 cho
+ * có biên. OpenAI ở bậc thấp nhất đã cho hàng trăm, nên không đáng giữ nhịp —
+ * 0 nghĩa là bỏ qua. Ai đã bật thanh toán Gemini thì nâng số này lên trong
+ * `.env`; hạn mức khi đó là hàng nghìn.
+ */
+const DEFAULT_REQUESTS_PER_MINUTE: Record<LlmProviderName, number> = { gemini: 8, openai: 0 }
 
 /**
  * Mặc định thấp hơn tool Python (100 ngôn ngữ song song) rất nhiều.
@@ -112,13 +124,23 @@ export interface TranslationRuntimeOptions {
  * riêng nên vế đó không còn, nhưng trần vẫn giữ: hạn mức của MỘT khoá cá nhân
  * ở bậc thấp nhất còn dễ chạm hơn hạn mức của cả nhóm, và 100 lượt gọi song
  * song từ một khoá mới là cách chắc chắn nhất để chạm nó.
+ *
+ * Nhận `provider` vì nhịp gọi là số duy nhất ở đây khác nhau giữa hai bên.
  */
 export const readRuntimeOptions = (
+  provider: LlmProviderName,
   env: NodeJS.ProcessEnv = process.env,
 ): TranslationRuntimeOptions => ({
   chunkTokenLimit: numberFrom(env.CHUNK_TOKEN_LIMIT, 4000),
   chunkConcurrency: Math.max(1, numberFrom(env.CHUNK_CONCURRENCY, 4)),
   languageConcurrency: Math.max(1, numberFrom(env.MAX_CONCURRENT_TRANSLATIONS, 6)),
+  requestsPerMinute: Math.max(
+    0,
+    numberFrom(
+      provider === 'openai' ? env.OPENAI_REQUESTS_PER_MINUTE : env.GEMINI_REQUESTS_PER_MINUTE,
+      DEFAULT_REQUESTS_PER_MINUTE[provider],
+    ),
+  ),
   preferNumericEntities: truthy(env.PREFER_NUMERIC_ENTITIES, false),
   escapeApostrophes: truthy(env.ESCAPE_APOSTROPHES, true),
 })

@@ -209,6 +209,7 @@ export function StringTranslatorScreen() {
             {translating || state.finished.length > 0 ? (
               <TranslationProgress
                 finished={state.finished}
+                waiting={state.waiting}
                 running={state.running}
                 ratio={progressRatio(state)}
               />

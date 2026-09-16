@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     credential.value.model,
   )
 
-  const options = serverContainer.translation.options()
+  const options = serverContainer.translation.options(credential.value.provider)
 
   const encoder = new TextEncoder()
 
@@ -176,16 +176,31 @@ export async function POST(request: Request) {
           chunkTokenLimit: options.chunkTokenLimit,
           languageConcurrency: options.languageConcurrency,
           chunkConcurrency: options.chunkConcurrency,
+          requestsPerMinute: options.requestsPerMinute,
           preferNumericEntities: options.preferNumericEntities,
           escapeApostrophes: options.escapeApostrophes,
         },
-        (code, failure) => {
-          send({
-            type: 'language',
-            code,
-            ok: failure === null,
-            ...(failure !== null ? { message: failure.message } : {}),
-          })
+        {
+          onLanguageDone: (code, failure) => {
+            send({
+              type: 'language',
+              code,
+              ok: failure === null,
+              ...(failure !== null ? { message: failure.message } : {}),
+            })
+          },
+          // Cũng là một nhịp giữ kết nối sống: lúc mọi ngôn ngữ cùng đứng chờ
+          // hạn mức, không có dòng này thì luồng im lặng đúng lúc dài nhất.
+          onRetryWait: (wait) => {
+            send({
+              type: 'waiting',
+              code: wait.code,
+              seconds: Math.ceil(wait.waitMs / 1000),
+              attempt: wait.attempt,
+              attempts: wait.attempts,
+              reason: wait.reason,
+            })
+          },
         },
         request.signal,
       )

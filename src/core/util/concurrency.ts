@@ -40,8 +40,12 @@ export async function mapWithLimit<T, R>(
  * dọn. Bộ nghe `abort` luôn được gỡ: một vòng lặp chạy hàng giờ mà mỗi vòng
  * để lại một bộ nghe là một chỗ rò rỉ chậm, không hiện ra trong lúc dev.
  */
-export function delay(ms: number, signal: AbortSignal): Promise<boolean> {
+export function delay(ms: number, signal?: AbortSignal): Promise<boolean> {
   return new Promise((resolve) => {
+    if (signal === undefined) {
+      setTimeout(() => resolve(true), ms)
+      return
+    }
     if (signal.aborted) {
       resolve(false)
       return

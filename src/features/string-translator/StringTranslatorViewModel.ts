@@ -67,6 +67,7 @@ function pickFile(ctx: Context, fileName: string, content: string): void {
     archive: null,
     failed: [],
     finished: [],
+    waiting: [],
     running: 0,
     error: null,
   }))
@@ -217,6 +218,7 @@ async function translate(ctx: Context, deps: StringTranslatorDeps): Promise<void
     status: 'translating',
     running: current.selected.length,
     finished: [],
+    waiting: [],
     failed: [],
     archive: null,
     error: null,
@@ -243,6 +245,22 @@ async function translate(ctx: Context, deps: StringTranslatorDeps): Promise<void
               code: event.code,
               ok: event.ok,
               ...(event.message !== undefined ? { message: event.message } : {}),
+            },
+          ],
+          // Xong rồi thì không còn chờ nữa, dù xong nghĩa là hỏng.
+          waiting: current.waiting.filter((wait) => wait.code !== event.code),
+        }))
+      } else if (event.type === 'waiting') {
+        ctx.setState((current) => ({
+          ...current,
+          waiting: [
+            ...current.waiting.filter((wait) => wait.code !== event.code),
+            {
+              code: event.code,
+              seconds: event.seconds,
+              attempt: event.attempt,
+              attempts: event.attempts,
+              reason: event.reason,
             },
           ],
         }))
@@ -434,6 +452,7 @@ export const StringTranslatorViewModel = defineViewModel<
           status: state.xml === null ? 'idle' : 'ready',
           running: 0,
           finished: [],
+          waiting: [],
         }))
         ctx.emit({ type: 'ShowMessage', severity: 'info', message: 'Đã dừng lượt dịch.' })
         return

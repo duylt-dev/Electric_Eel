@@ -56,6 +56,19 @@ export interface LanguageFailure {
 export type TranslationEvent =
   | { readonly type: 'started'; readonly languages: readonly string[]; readonly chunks: number }
   | { readonly type: 'language'; readonly code: string; readonly ok: boolean; readonly message?: string }
+  /**
+   * Một ngôn ngữ đang đứng chờ trước khi gọi lại mô hình — thường là vì hạn
+   * mức. Không có dòng này, người dùng nhìn thanh tiến độ đứng im cả phút và
+   * kết luận tool treo, trong khi nó đang làm đúng việc phải làm.
+   */
+  | {
+      readonly type: 'waiting'
+      readonly code: string
+      readonly seconds: number
+      readonly attempt: number
+      readonly attempts: number
+      readonly reason: string
+    }
   | {
       readonly type: 'finished'
       readonly archive: TranslatedArchive

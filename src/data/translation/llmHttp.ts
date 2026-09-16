@@ -2,6 +2,7 @@ import { AppErrors } from '../../core/result'
 import type { AppError } from '../../core/result'
 import { LLM_PROVIDER_INFO } from '../../domain/translation/entities/LlmProvider'
 import type { LlmProviderName } from '../../domain/translation/entities/LlmProvider'
+import type { TranslateChunkError } from '../../domain/translation/repositories/StringTranslator'
 
 /**
  * Phần nói chuyện HTTP dùng chung cho mọi lượt gọi tới nhà cung cấp mô hình.
@@ -61,10 +62,68 @@ export function mapProviderFailure(
   }
 }
 
-/** Đọc thân lỗi để đưa vào `detail`. Cắt ngắn: log không cần cả trang HTML. */
-export async function describeFailure(response: Response): Promise<string> {
+/** Thân lỗi đã đọc, kèm khoảng chờ nhà cung cấp yêu cầu nếu họ có nói. */
+export interface ProviderFailure {
+  readonly detail: string
+  readonly retryAfterMs?: number
+}
+
+/**
+ * Đọc thân lỗi một lần, lấy ra hai thứ: chi tiết để log, và "chờ bao lâu".
+ *
+ * Khoảng chờ nằm ở ba chỗ tuỳ nhà cung cấp, và không chỗ nào là chuẩn chung:
+ *
+ *   · Tiêu đề `Retry-After` — chuẩn HTTP, cả hai bên đôi khi gửi.
+ *   · Gemini: `"retryDelay": "37s"` trong `error.details` (google.rpc.RetryInfo).
+ *   · OpenAI: câu "Please try again in 20s" (hoặc `350ms`) trong `error.message`.
+ *
+ * Đọc bằng regex trên văn bản thô thay vì parse JSON: thân lỗi 5xx thường là
+ * HTML, và một trang HTML không nên làm hỏng việc đọc mã lỗi.
+ */
+export async function readFailure(response: Response): Promise<ProviderFailure> {
   const text = await response.text().catch(() => '')
-  return text.length === 0 ? `HTTP ${response.status}` : text.slice(0, 500)
+  const detail = text.length === 0 ? `HTTP ${response.status}` : text.slice(0, 500)
+  const retryAfterMs = retryAfterFrom(response.headers.get('retry-after'), text)
+  return retryAfterMs === undefined ? { detail } : { detail, retryAfterMs }
+}
+
+/** Chỉ cần chi tiết, không cần khoảng chờ — dùng khi liệt kê model. */
+export const describeFailure = async (response: Response): Promise<string> =>
+  (await readFailure(response)).detail
+
+function retryAfterFrom(header: string | null, body: string): number | undefined {
+  if (header !== null) {
+    const seconds = Number(header)
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
+    const at = Date.parse(header)
+    if (Number.isFinite(at)) return Math.max(0, at - Date.now())
+  }
+
+  const gemini = /"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/.exec(body)
+  if (gemini?.[1] !== undefined) return Number(gemini[1]) * 1000
+
+  const openai = /try again in (\d+(?:\.\d+)?)\s*(ms|s)\b/i.exec(body)
+  if (openai?.[1] !== undefined) {
+    return Number(openai[1]) * (openai[2]?.toLowerCase() === 'ms' ? 1 : 1000)
+  }
+  return undefined
+}
+
+/** 429 và 5xx là lỗi của phía họ hoặc của hạn mức — chờ rồi gọi lại là có cơ hội. */
+export const isTransientStatus = (status: number): boolean => status === 429 || status >= 500
+
+/** Gắn gợi ý thử lại vào lỗi HTTP đã quy về `AppError`. */
+export function toChunkError(
+  error: AppError,
+  status: number,
+  failure: ProviderFailure,
+): TranslateChunkError {
+  if (!isTransientStatus(status)) return error
+  return {
+    ...error,
+    transient: true,
+    ...(failure.retryAfterMs !== undefined ? { retryAfterMs: failure.retryAfterMs } : {}),
+  }
 }
 
 /**
@@ -77,15 +136,16 @@ export function mapProviderThrow(
   thrown: unknown,
   provider: LlmProviderName,
   options: { readonly userSignal?: AbortSignal; readonly timeout?: AbortSignal; readonly timeoutMs?: number },
-): AppError {
+): TranslateChunkError {
   const label = LLM_PROVIDER_INFO[provider].label
 
   if (options.userSignal?.aborted === true) return AppErrors.cancelled('Đã huỷ lượt gọi.')
 
+  // Quá hạn và mất mạng đều là chuyện tạm thời — khác với huỷ ở trên.
   if (options.timeout?.aborted === true) {
     const seconds = Math.round((options.timeoutMs ?? 0) / 1000)
-    return AppErrors.network(`${label} không trả lời trong ${seconds} giây.`)
+    return { ...AppErrors.network(`${label} không trả lời trong ${seconds} giây.`), transient: true }
   }
 
-  return AppErrors.network(`Không gọi được tới ${label}.`, { cause: thrown })
+  return { ...AppErrors.network(`Không gọi được tới ${label}.`, { cause: thrown }), transient: true }
 }

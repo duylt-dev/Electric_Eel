@@ -1,6 +1,11 @@
 import { AppErrors, type Result, err, ok } from '../../core/result'
-import type { StringTranslator, TranslateChunkRequest } from '../../domain/translation/repositories/StringTranslator'
-import { GEMINI_BASE, OPENAI_BASE, authHeaders, describeFailure, mapProviderFailure, mapProviderThrow } from './llmHttp'
+import type {
+  StringTranslator,
+  TranslateChunkError,
+  TranslateChunkRequest,
+} from '../../domain/translation/repositories/StringTranslator'
+import { GEMINI_BASE, OPENAI_BASE, authHeaders, mapProviderFailure, mapProviderThrow, readFailure, toChunkError } from './llmHttp'
+import type { LlmProviderName } from '../../domain/translation/entities/LlmProvider'
 import { describeModel } from './translationProvider'
 import type { TranslationProviderConfig } from './translationProvider'
 
@@ -55,6 +60,12 @@ ${request.xml}
 Translated XML:`
 }
 
+/** Quy một phản hồi lỗi về lỗi mẻ, giữ lại gợi ý "chờ bao lâu" của nhà cung cấp. */
+async function failureOf(response: Response, provider: LlmProviderName): Promise<TranslateChunkError> {
+  const failure = await readFailure(response)
+  return toChunkError(mapProviderFailure(response.status, provider, failure.detail), response.status, failure)
+}
+
 interface OpenAiResponse {
   choices?: readonly { message?: { content?: string } }[]
 }
@@ -73,7 +84,7 @@ export class LlmStringTranslator implements StringTranslator {
   async translateChunk(
     request: TranslateChunkRequest,
     signal?: AbortSignal,
-  ): Promise<Result<string>> {
+  ): Promise<Result<string, TranslateChunkError>> {
     // Hai nguồn dừng gộp làm một: người dùng bấm huỷ, và lượt gọi quá hạn. Thiếu
     // vế thứ hai thì một lượt gọi treo giữ luôn cả mẻ cho tới khi tiến trình chết.
     const timeout = AbortSignal.timeout(this.config.timeoutMs)
@@ -95,7 +106,7 @@ export class LlmStringTranslator implements StringTranslator {
   private async callProvider(
     request: TranslateChunkRequest,
     signal: AbortSignal,
-  ): Promise<Result<string>> {
+  ): Promise<Result<string, TranslateChunkError>> {
     const config = this.config
     const prompt = buildPrompt(request)
 
@@ -112,9 +123,7 @@ export class LlmStringTranslator implements StringTranslator {
         signal,
       })
 
-      if (!response.ok) {
-        return err(mapProviderFailure(response.status, 'openai', await describeFailure(response)))
-      }
+      if (!response.ok) return err(await failureOf(response, 'openai'))
 
       const body = (await response.json()) as OpenAiResponse
       const content = body.choices?.[0]?.message?.content
@@ -141,9 +150,7 @@ export class LlmStringTranslator implements StringTranslator {
       signal,
     })
 
-    if (!response.ok) {
-      return err(mapProviderFailure(response.status, 'gemini', await describeFailure(response)))
-    }
+    if (!response.ok) return err(await failureOf(response, 'gemini'))
 
     const body = (await response.json()) as GeminiResponse
     // Gemini trả nội dung thành nhiều mảnh; nối lại chứ đừng lấy mảnh đầu.
