@@ -118,14 +118,6 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
             </Alert>
           )}
 
-          {state.status === 'waiting' && (
-            <Alert severity="info">
-              {state.pid === null && state.restarts === 0
-                ? `Chưa thấy tiến trình nào của ${state.packageName}. Mở app trên máy — log sẽ tự chảy về ngay từ dòng đầu tiên.`
-                : 'App vừa thoát. Đang chờ nó khởi động lại để bám tiếp — không cần bấm gì.'}
-            </Alert>
-          )}
-
           {/* MỘT hàng cho mọi nút và bộ lọc: nút luồng · mức · tag · tìm ·
               cỡ chữ · bám đáy. Gói `flexWrap` để màn hẹp vẫn dùng
               được, còn trên màn thường thì khung log bắt đầu ngay dưới. */}
