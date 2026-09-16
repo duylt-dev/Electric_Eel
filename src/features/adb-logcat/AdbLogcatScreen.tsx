@@ -12,7 +12,6 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useCallback, useMemo, useState } from 'react'
 
-import { countByLevel } from '@/domain/adb/entities/LogcatFilter'
 import { DeviceMirrorRoot } from '@/features/device-mirror/DeviceMirrorRoot'
 import { LinkIconButton } from '@/ui/components/NavLink'
 import { PageHeader } from '@/ui/components/PageHeader'
@@ -78,7 +77,6 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
   // thay `state` một lần, nhưng bấm tạm dừng hay đổi bám đáy thì không được
   // lọc lại 5000 dòng.
   const shown = useMemo(() => visibleLines(state.lines, state.filter), [state.lines, state.filter])
-  const counts = useMemo(() => countByLevel(state.lines), [state.lines])
 
   const live = isLive(state)
 
@@ -146,7 +144,6 @@ export function AdbLogcatScreen({ mirrorAvailable }: AdbLogcatScreenProps) {
 
             <LogFilterBar
               filter={state.filter}
-              counts={counts}
               onToggleLevel={(level) => onIntent({ type: 'LevelToggled', level })}
               onTagChange={(value) => onIntent({ type: 'TagFilterChanged', value })}
               onQueryChange={(value) => onIntent({ type: 'QueryChanged', value })}

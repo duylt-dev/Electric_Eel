@@ -53,10 +53,3 @@ export const filterLines = (
   lines: readonly LogcatLine[],
   filter: LogcatFilter,
 ): LogcatLine[] => lines.filter((line) => matchesFilter(line, filter))
-
-/** Đếm số dòng theo mức — dùng cho hàng chip, để biết tắt mức nào là mất bao nhiêu. */
-export function countByLevel(lines: readonly LogcatLine[]): Record<LogLevel, number> {
-  const counts: Record<LogLevel, number> = { V: 0, D: 0, I: 0, W: 0, E: 0, F: 0 }
-  for (const line of lines) counts[line.level] += 1
-  return counts
-}

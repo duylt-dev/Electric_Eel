@@ -21,9 +21,9 @@ import type { M3ColorRole } from '@/ui/theme/m3Tokens'
  * nó CÙNG HÀNG với dãy nút luồng và nút cỡ chữ; một hàng duy nhất trên đầu
  * khung log là cách khung log lấy được gần hết chiều cao trang.
  *
- * Số bên cạnh mỗi mức là số dòng ĐANG CÓ trong đệm ở mức đó — không phải số
- * dòng đang hiện. Nhờ vậy tắt một mức rồi vẫn thấy mình đang giấu đi bao nhiêu,
- * và không ai đi tìm một lỗi đã bị chính bộ lọc của mình che mất.
+ * Chip KHÔNG hiện số dòng theo mức. Đếm là một vòng qua toàn bộ đệm (tới 5000
+ * dòng) mỗi lô log tới, chỉ để ra một con số ít ai đọc; bỏ đi thì mỗi lô chỉ
+ * tốn đúng một lần lọc.
  *
  * Chỉ có chip cho D/I/W/E. Verbose và Fatal vẫn hiện trong khung log, nhưng
  * không ai tắt riêng chúng: V gần như không app nào in ra, F thì xuất hiện là
@@ -36,13 +36,12 @@ const CHIP_LEVELS: readonly LogLevel[] = ['D', 'I', 'W', 'E']
 
 export interface LogFilterBarProps {
   filter: LogcatFilter
-  counts: Record<LogLevel, number>
   onToggleLevel: (level: LogLevel) => void
   onTagChange: (value: string) => void
   onQueryChange: (value: string) => void
 }
 
-export function LogFilterBar({ filter, counts, onToggleLevel, onTagChange, onQueryChange }: LogFilterBarProps) {
+export function LogFilterBar({ filter, onToggleLevel, onTagChange, onQueryChange }: LogFilterBarProps) {
   return (
     <>
       <Stack direction="row" sx={{ gap: 0.75, alignItems: 'center' }}>
@@ -51,7 +50,6 @@ export function LogFilterBar({ filter, counts, onToggleLevel, onTagChange, onQue
             key={level}
             level={level}
             active={filter.levels.includes(level)}
-            count={counts[level]}
             onClick={() => onToggleLevel(level)}
           />
         ))}
@@ -121,17 +119,7 @@ const LEVEL_TONE: Record<LogLevel, M3ColorRole> = {
   F: 'error',
 }
 
-function LevelChip({
-  level,
-  active,
-  count,
-  onClick,
-}: {
-  level: LogLevel
-  active: boolean
-  count: number
-  onClick: () => void
-}) {
+function LevelChip({ level, active, onClick }: { level: LogLevel; active: boolean; onClick: () => void }) {
   const tone = m3(LEVEL_TONE[level])
 
   return (
@@ -140,12 +128,11 @@ function LevelChip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      title={`${LEVEL_LABEL[level]} — ${count.toLocaleString('vi-VN')} dòng`}
+      title={LEVEL_LABEL[level]}
       sx={{
         ...m3Mono.chip,
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 1,
         cursor: 'pointer',
         borderRadius: `${m3Shape.full}px`,
         paddingInline: '7px',
@@ -158,9 +145,6 @@ function LevelChip({
       }}
     >
       {level}
-      <Box component="span" sx={{ color: 'inherit', opacity: 0.75 }}>
-        {count > 999 ? '999+' : count}
-      </Box>
     </Box>
   )
 }

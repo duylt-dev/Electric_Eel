@@ -4,7 +4,6 @@ import { describe, it } from 'node:test'
 import {
   ALL_LEVELS,
   DEFAULT_LOGCAT_FILTER,
-  countByLevel,
   filterLines,
   matchesFilter,
   toggleLevel,
@@ -60,8 +59,3 @@ describe('toggleLevel', () => {
   })
 })
 
-describe('countByLevel', () => {
-  it('đếm đủ sáu mức, kể cả mức không có dòng nào', () => {
-    assert.deepEqual(countByLevel(LINES), { V: 0, D: 1, I: 1, W: 0, E: 1, F: 0 })
-  })
-})
