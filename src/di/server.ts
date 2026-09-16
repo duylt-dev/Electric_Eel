@@ -2,7 +2,7 @@ import 'server-only'
 
 import { AaptLabelReader } from '@/data/adb/AaptLabelReader'
 import { ProcessAdbShell } from '@/data/adb/ProcessAdbShell'
-import { readAdbSettings } from '@/data/adb/adbSettings'
+import { adbAccess, readAdbSettings } from '@/data/adb/adbSettings'
 import { PrismaAppDirectory } from '@/data/db/PrismaAppDirectory'
 import { PrismaAuditLog } from '@/data/db/PrismaAuditLog'
 import { PrismaRateLimit } from '@/data/db/PrismaRateLimit'
@@ -90,6 +90,8 @@ export const serverContainer = {
    */
   adb: {
     shell: adbShell,
+    /** Trang truyền xuống trình duyệt để chọn adapter: adb ở máy chủ, hay WebUSB. */
+    access: adbAccess,
     /** Đọc tên app từ APK qua aapt2 — chỉ route `packages/labels` dùng. */
     labels: new AaptLabelReader(adbShell),
     settings: () => readAdbSettings(),

@@ -45,7 +45,9 @@ const securityHeaders = [
   // Slug của app và tên project Firebase nằm trên URL, nên đừng để chúng đi
   // theo Referer sang trang ngoài.
   { key: 'Referrer-Policy', value: 'same-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()' },
+  // `usb=(self)` là mặc định của trình duyệt, ghi ra để ai đọc header biết
+  // Logcat cần WebUSB — thêm `usb=()` vào đây là tắt Logcat ở production.
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), usb=(self), interest-cohort=()' },
   { key: 'X-DNS-Prefetch-Control', value: 'off' },
 ]
 

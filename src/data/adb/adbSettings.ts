@@ -1,17 +1,20 @@
 import { AppErrors, type Result, err, ok } from '../../core/result'
+import type { AdbAccess } from '../../domain/adb/entities/AdbAccess'
 
 /**
- * Cấu hình của công cụ Logcat.
+ * Cấu hình của adb Ở MÁY CHỦ.
  *
  * ─── Vì sao mặc định TẮT ở production ───
  *
- * Công cụ này là thứ duy nhất trong cả supertool sinh ra tiến trình con trên
+ * Đường này là thứ duy nhất trong cả supertool sinh ra tiến trình con trên
  * máy chủ. Ở máy dev thì đó chính là điểm hữu ích của nó — adb ở đó nhìn thấy
- * điện thoại đang cắm. Trên một máy chủ dùng chung thì adb ở đó không nhìn
- * thấy máy của ai cả, nên tính năng vừa vô dụng vừa mở thêm một bề mặt.
+ * điện thoại đang cắm. Trên một máy chủ dùng chung (và trên Vercel, nơi không
+ * có adb lẫn USB) thì adb ở đó không nhìn thấy máy của ai cả.
  *
  * Vì vậy: bật sẵn khi `NODE_ENV !== 'production'`, và ở production thì phải tự
- * tay đặt `ADB_ENABLED=true`. Mặc định an toàn, và ai thật sự cần vẫn bật được.
+ * tay đặt `ADB_ENABLED=true`. Tắt KHÔNG có nghĩa là Logcat tắt: trang chuyển
+ * sang đường WebUSB — trình duyệt nói chuyện thẳng với máy của người dùng
+ * (`adbAccess`). Cờ này chỉ chọn đường, xem `domain/adb/entities/AdbAccess`.
  */
 export interface AdbSettings {
   /** Đường dẫn tới adb. Mặc định là `adb`, tức là tìm trong PATH. */
@@ -32,11 +35,15 @@ export function isAdbEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.NODE_ENV !== 'production'
 }
 
+/** Đường tới thiết bị mà trang truyền xuống trình duyệt. */
+export const adbAccess = (env: NodeJS.ProcessEnv = process.env): AdbAccess =>
+  isAdbEnabled(env) ? 'server' : 'webusb'
+
 export function readAdbSettings(env: NodeJS.ProcessEnv = process.env): Result<AdbSettings> {
   if (!isAdbEnabled(env)) {
     return err(
       AppErrors.forbidden(
-        'Công cụ Logcat đang tắt trên máy chủ này. Đặt ADB_ENABLED=true nếu adb ở đây thật sự nhìn thấy thiết bị của bạn.',
+        'adb ở máy chủ này đang tắt (ADB_ENABLED); thiết bị nối qua trình duyệt bằng WebUSB.',
       ),
     )
   }

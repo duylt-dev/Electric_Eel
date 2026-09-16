@@ -1,8 +1,14 @@
 'use client'
 
-import { LogcatPickerViewModel } from './LogcatPickerViewModel'
+import type { AdbAccess } from '@/domain/adb/entities/AdbAccess'
+import { LogcatPickerViewModel, logcatPickerDeps } from './LogcatPickerViewModel'
 import { LogcatPickerScreen } from './LogcatPickerScreen'
 import type { LogcatPickerScreenProps } from './LogcatPickerScreen'
+
+export interface LogcatPickerRootProps extends LogcatPickerScreenProps {
+  /** Trang tính từ `ADB_ENABLED`; xem `AdbAccess`. */
+  access: AdbAccess
+}
 
 /**
  * Gắn ViewModel vào vòng đời màn hình.
@@ -12,10 +18,10 @@ import type { LogcatPickerScreenProps } from './LogcatPickerScreen'
  * trong `onStart` của ViewModel, nên nó chạy đúng một lần theo vòng đời
  * ViewModel chứ không theo vòng đời một effect trong component.
  */
-export function LogcatPickerRoot(props: LogcatPickerScreenProps) {
+export function LogcatPickerRoot({ access, ...screenProps }: LogcatPickerRootProps) {
   return (
-    <LogcatPickerViewModel.Provider>
-      <LogcatPickerScreen {...props} />
+    <LogcatPickerViewModel.Provider deps={logcatPickerDeps(access)}>
+      <LogcatPickerScreen {...screenProps} access={access} />
     </LogcatPickerViewModel.Provider>
   )
 }

@@ -1,6 +1,7 @@
 import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
-import { clientContainer } from '@/di/client'
+import { adbRepositoryFor } from '@/di/client'
+import type { AdbAccess } from '@/domain/adb/entities/AdbAccess'
 import { toggleLevel } from '@/domain/adb/entities/LogcatFilter'
 import { parseLogcatLine } from '@/domain/adb/entities/LogcatLine'
 import type { LogcatLine } from '@/domain/adb/entities/LogcatLine'
@@ -212,8 +213,8 @@ export const AdbLogcatViewModel = defineViewModel<
 })
 
 /** Phụ thuộc dùng thật trong ứng dụng. Test truyền bộ khác vào. */
-export const adbLogcatDeps = (serial: string, packageName: string): AdbLogcatDeps => ({
-  adb: clientContainer.adb,
+export const adbLogcatDeps = (access: AdbAccess, serial: string, packageName: string): AdbLogcatDeps => ({
+  adb: adbRepositoryFor(access),
   serial,
   packageName,
 })

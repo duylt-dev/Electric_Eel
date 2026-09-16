@@ -37,10 +37,7 @@ export default async function AdbLogcatPage({ params, searchParams }: PageProps)
     return <Alert severity="error">{user.error.message}</Alert>
   }
 
-  const settings = serverContainer.adb.settings()
-  if (!settings.ok) {
-    return <Alert severity="warning">{settings.error.message}</Alert>
-  }
+  const access = serverContainer.adb.access()
 
   const { package: rawPackage } = await params
   const { serial: rawSerial } = await searchParams
@@ -66,7 +63,8 @@ export default async function AdbLogcatPage({ params, searchParams }: PageProps)
   // Không chặn trang khi máy chủ thiếu scrcpy-server: xem log vẫn phải chạy
   // được; chỉ có nút "Phản chiếu" là không hiện. Lý do thiếu nằm trong lỗi của
   // `readMirrorSettings` — không nhắc ở đây để cảnh báo không nằm cạnh mọi lượt xem log.
-  const mirrorAvailable = serverContainer.deviceMirror.settings().ok
+  // Ở đường WebUSB mirror chưa có (scrcpy vẫn chạy ở máy chủ) — xem LLM.md §11.
+  const mirrorAvailable = access === 'server' && serverContainer.deviceMirror.settings().ok
 
   return (
     // `key` buộc dựng lại ViewModel khi đổi app hoặc đổi máy: đệm log của lượt
@@ -74,6 +72,7 @@ export default async function AdbLogcatPage({ params, searchParams }: PageProps)
     // kiểu lỗi rất khó nhìn ra.
     <AdbLogcatRoot
       key={`${serial}:${packageName}`}
+      access={access}
       serial={serial}
       packageName={packageName}
       mirrorAvailable={mirrorAvailable}

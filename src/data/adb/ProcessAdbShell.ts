@@ -10,6 +10,7 @@ import type {
   AdbShell,
 } from '../../domain/adb/repositories/AdbShell'
 import { readAdbSettings } from './adbSettings'
+import { LineSplitter } from './lineSplitter'
 
 /**
  * Chạy `adb` bằng tiến trình con trên chính máy chủ.
@@ -147,7 +148,7 @@ export class ProcessAdbShell implements AdbShell {
       }
 
       let stderr = ''
-      let buffered = ''
+      const lines = new LineSplitter(onLine)
       let settled = false
 
       const finish = (result: Result<AdbExit>): void => {
@@ -163,21 +164,7 @@ export class ProcessAdbShell implements AdbShell {
       signal?.addEventListener('abort', onAbort, { once: true })
 
       child.stdout?.setEncoding('utf8')
-      child.stdout?.on('data', (chunk: string) => {
-        buffered += chunk
-        let newline = buffered.indexOf('\n')
-        while (newline >= 0) {
-          onLine(buffered.slice(0, newline))
-          buffered = buffered.slice(newline + 1)
-          newline = buffered.indexOf('\n')
-        }
-        // Dòng dở dang ở lại chờ mẩu sau. Trần này chặn trường hợp bệnh lý:
-        // một tiến trình in ra vài MB không có ký tự xuống dòng nào.
-        if (buffered.length > 64 * 1024) {
-          onLine(buffered)
-          buffered = ''
-        }
-      })
+      child.stdout?.on('data', (chunk: string) => lines.push(chunk))
       child.stderr?.setEncoding('utf8')
       child.stderr?.on('data', (chunk: string) => {
         if (stderr.length < MAX_OUTPUT_BYTES) stderr += chunk
@@ -186,7 +173,7 @@ export class ProcessAdbShell implements AdbShell {
       child.on('error', (thrown) => finish(err(describeSpawnFailure(thrown, binary))))
 
       child.on('close', (code) => {
-        if (buffered.length > 0) onLine(buffered)
+        lines.flush()
         finish(ok({ code, stderr }))
       })
     })

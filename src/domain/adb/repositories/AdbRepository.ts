@@ -1,12 +1,13 @@
 import type { Result } from '../../../core/result'
+import type { AdbAccess } from '../entities/AdbAccess'
 import type { AdbDevice } from '../entities/AdbDevice'
 import type { DeviceWatchEvent } from '../entities/DeviceWatchEvent'
 import type { LogcatEvent, LogcatRequest } from '../entities/LogcatSession'
 import type { PackageLabelEvent } from '../entities/PackageLabelEvent'
 
 /**
- * Cổng mà ViewModel dùng. Bên trình duyệt nó là các lệnh gọi Route Handler;
- * `adb` thật thì chạy ở máy chủ và không bao giờ lộ ra đây.
+ * Cổng mà ViewModel dùng. Có hai hiện thực (xem `AdbAccess`): gọi Route Handler
+ * để `adb` ở máy chủ làm, hoặc nói chuyện thẳng với máy qua WebUSB.
  *
  * Đây là ranh giới quan trọng nhất của công cụ này: mọi thứ ở phía trên cổng
  * chỉ biết "danh sách thiết bị", "danh sách app", "luồng log" — không biết
@@ -14,6 +15,19 @@ import type { PackageLabelEvent } from '../entities/PackageLabelEvent'
  * xuống một tham số adb do nó tự đặt.
  */
 export interface AdbRepository {
+  readonly access: AdbAccess
+
+  /**
+   * Xin quyền dùng MỘT thiết bị: mở hộp chọn của trình duyệt.
+   *
+   * Chỉ có nghĩa với `webusb` — WebUSB không cho trang tự thấy máy, người dùng
+   * phải chọn trong hộp thoại của trình duyệt, và hộp đó chỉ mở được từ một
+   * cú bấm. Máy chọn xong sẽ về qua `watchDevices` như mọi máy khác. Trả
+   * `null` khi người dùng đóng hộp mà không chọn — đó không phải lỗi.
+   * Với `server` thì adb tự thấy máy, hàm này trả lỗi `validation`.
+   */
+  requestDevice(): Promise<Result<AdbDevice | null>>
+
   listDevices(signal?: AbortSignal): Promise<Result<AdbDevice[]>>
 
   /**

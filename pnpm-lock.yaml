@@ -35,6 +35,12 @@ importers:
       '@yume-chan/adb':
         specifier: ^2.6.4
         version: 2.6.4
+      '@yume-chan/adb-credential-web':
+        specifier: ^2.1.0
+        version: 2.1.0
+      '@yume-chan/adb-daemon-webusb':
+        specifier: ^2.3.2
+        version: 2.3.2
       '@yume-chan/adb-scrcpy':
         specifier: ^2.3.2
         version: 2.3.2
@@ -1102,6 +1108,9 @@ packages:
   '@types/react@19.2.18':
     resolution: {integrity: sha512-AnzbBERsrLKtk2XSfTbYRLjQPdy116Sty4q+T+Bp3IC4l6jNBvreVPAHmpq9qhXQM7CXZPjLVmGMw9sy+hxQ3w==}
 
+  '@types/w3c-web-usb@1.0.14':
+    resolution: {integrity: sha512-Qu3Nn6JFuF4+sHKYl+IcX9vYiI40ogleXzFFSxoE1W94rG98o/kXs8uJ0QSfFzuwBCZWlGfUGpPkgwuuX4PchA==}
+
   '@typescript-eslint/eslint-plugin@8.68.0':
     resolution: {integrity: sha512-WASHDpCm6qO5jj9g1a+8NiW5+GCkAyLReR56/4VruYmNgfUmqpxOfZ2Yfb8xGfJPWv5Qi6LSD8sXdces3vbp/Q==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
@@ -1315,6 +1324,12 @@ packages:
 
   '@visx/vendor@4.0.0-alpha.0':
     resolution: {integrity: sha512-6I+MuqXBcv9jnlcVowHoHKSdk9gXTWkHLKyqBwRWg7LY6A3Ei8SHfubpqGV5rBUSppxMq2RszPJUS6w+H0YgmQ==}
+
+  '@yume-chan/adb-credential-web@2.1.0':
+    resolution: {integrity: sha512-ps5XWt+xxm6Mi9eF80ePprPJ/uRFMhfR437betQE8hixrjdZpkZgMlqZU6GlnuebMi0djrbP8GWB49jJekJVYA==}
+
+  '@yume-chan/adb-daemon-webusb@2.3.2':
+    resolution: {integrity: sha512-5ANaqsRJWFc5kKMnGALjYCrSXo5eC4u51dvYppvuBCLVjv12n7he2TPy5yEZ3XtlToRFS0kWCQC0XS8M60lRSA==}
 
   '@yume-chan/adb-scrcpy@2.3.2':
     resolution: {integrity: sha512-wg45dep+dYy4MAVMtsooPAo/aXKiGbpGHzcQWoHnl4uE4YJKrZK0sK5L++rPNM0WbwlPdSpZ32jMJT+i0u1Mdw==}
@@ -4092,6 +4107,8 @@ snapshots:
     dependencies:
       csstype: 3.2.3
 
+  '@types/w3c-web-usb@1.0.14': {}
+
   '@typescript-eslint/eslint-plugin@8.68.0(@typescript-eslint/parser@8.68.0(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.5(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
@@ -4329,6 +4346,18 @@ snapshots:
       d3-time: 3.1.0
       d3-time-format: 4.1.0
       internmap: 2.0.3
+
+  '@yume-chan/adb-credential-web@2.1.0':
+    dependencies:
+      '@yume-chan/adb': 2.6.4
+
+  '@yume-chan/adb-daemon-webusb@2.3.2':
+    dependencies:
+      '@types/w3c-web-usb': 1.0.14
+      '@yume-chan/adb': 2.6.4
+      '@yume-chan/event': 2.0.0
+      '@yume-chan/stream-extra': 2.6.1
+      '@yume-chan/struct': 2.3.2
 
   '@yume-chan/adb-scrcpy@2.3.2':
     dependencies:

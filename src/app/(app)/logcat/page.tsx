@@ -10,14 +10,14 @@ export const metadata: Metadata = { title: 'Logcat' }
 /**
  * Cửa vào công cụ Logcat.
  *
- * Trang chỉ lo ba việc: kiểm quyền, kiểm xem công cụ có bật không, và đưa danh
+ * Trang chỉ lo ba việc: kiểm quyền, quyết định đường tới thiết bị, và đưa danh
  * bạ app xuống màn hình. Danh sách thiết bị và danh sách app KHÔNG đọc ở đây —
  * chúng đến từ adb, thay đổi theo từng giây (cắm cáp, rút cáp), nên đọc lúc
  * dựng trang là đảm bảo hiển thị một ảnh chụp đã cũ.
  *
- * Trạng thái bật/tắt thì ngược lại: đọc ngay ở đây. "Công cụ đang tắt trên máy
- * chủ này" là thứ người dùng cần biết TRƯỚC khi ngồi chờ một danh sách thiết bị
- * không bao giờ tới.
+ * Đường tới thiết bị (`access`) thì ngược lại: chỉ máy chủ biết `ADB_ENABLED`,
+ * và trình duyệt cần biết nó TRƯỚC khi dựng ViewModel — hai đường là hai
+ * adapter khác nhau, không đổi được giữa chừng.
  */
 export default async function LogcatPickerPage() {
   const user = await requireUser()
@@ -25,10 +25,7 @@ export default async function LogcatPickerPage() {
     return <Alert severity="error">{user.error.message}</Alert>
   }
 
-  const settings = serverContainer.adb.settings()
-  if (!settings.ok) {
-    return <Alert severity="warning">{settings.error.message}</Alert>
-  }
+  const access = serverContainer.adb.access()
 
   const apps = await serverContainer.appDirectory.listAppsForUser(user.value)
 
@@ -42,5 +39,5 @@ export default async function LogcatPickerPage() {
       }))
     : []
 
-  return <LogcatPickerRoot directory={directory} />
+  return <LogcatPickerRoot access={access} directory={directory} />
 }

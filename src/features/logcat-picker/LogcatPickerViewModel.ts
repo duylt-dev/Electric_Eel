@@ -1,7 +1,8 @@
 import { defineViewModel } from '@/core/mvi'
 import type { IntentContext } from '@/core/mvi'
 import { AppErrors } from '@/core/result'
-import { clientContainer } from '@/di/client'
+import { adbRepositoryFor } from '@/di/client'
+import type { AdbAccess } from '@/domain/adb/entities/AdbAccess'
 import { autoSelectDevice } from '@/domain/adb/entities/AdbDevice'
 import { isSafePackageName } from '@/domain/adb/entities/AndroidPackage'
 import type { AdbRepository } from '@/domain/adb/repositories/AdbRepository'
@@ -165,6 +166,8 @@ export const LogcatPickerViewModel = defineViewModel<
     switch (intent.type) {
       case 'DevicesRefreshRequested':
         return DEVICES_KEY
+      case 'DeviceConnectRequested':
+        return undefined
       case 'DeviceSelected':
       case 'PackagesRefreshRequested':
         return PACKAGES_KEY
@@ -178,6 +181,16 @@ export const LogcatPickerViewModel = defineViewModel<
       case 'DevicesRefreshRequested':
         await watch(ctx, deps)
         return
+
+      case 'DeviceConnectRequested': {
+        // Máy chọn xong sẽ tự về qua luồng theo dõi — ở đây chỉ báo khi hỏng.
+        // Người dùng đóng hộp mà không chọn thì `null`: không có gì để nói.
+        const chosen = await deps.adb.requestDevice()
+        if (!chosen.ok) {
+          ctx.emit({ type: 'ShowMessage', severity: 'error', message: chosen.error.message })
+        }
+        return
+      }
 
       case 'DeviceSelected': {
         ctx.setState((state) => ({ ...state, selectedSerial: intent.serial, ...EMPTY_PACKAGES }))
@@ -230,5 +243,15 @@ export const LogcatPickerViewModel = defineViewModel<
     ctx.emit({ type: 'ShowMessage', severity: 'error', message: error.message })
   },
 
-  createDependencies: (): LogcatPickerDeps => ({ adb: clientContainer.adb }),
+  createDependencies: () => {
+    throw new Error(
+      'LogcatPickerViewModel cần được cấp phụ thuộc: <LogcatPickerViewModel.Provider deps={logcatPickerDeps(access)}>. ' +
+        'Đường tới thiết bị (server hay webusb) do trang quyết định nên không có mặc định ở đây.',
+    )
+  },
+})
+
+/** Phụ thuộc dùng thật trong ứng dụng. Test truyền bộ khác vào. */
+export const logcatPickerDeps = (access: AdbAccess): LogcatPickerDeps => ({
+  adb: adbRepositoryFor(access),
 })

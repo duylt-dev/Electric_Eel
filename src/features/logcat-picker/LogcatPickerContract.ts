@@ -82,6 +82,13 @@ export type LogcatPickerIntent =
    */
   | { type: 'DevicesRefreshRequested' }
   /**
+   * Mở hộp chọn thiết bị của trình duyệt (chỉ ở đường WebUSB). WebUSB không cho
+   * trang tự thấy máy: người dùng phải chọn máy trong hộp thoại của trình
+   * duyệt, và hộp đó chỉ mở được từ một cú bấm — nên đây là intent, không phải
+   * việc `onStart` làm được.
+   */
+  | { type: 'DeviceConnectRequested' }
+  /**
    * `serial` là `null` khi máy đang chọn không còn dùng được (rút cáp, rớt
    * mạng): danh sách app của nó phải bỏ, và lượt nạp đang bay phải huỷ. Màn
    * hình chỉ bắn chuỗi; `null` là do luồng theo dõi máy tự bắn.

@@ -4,6 +4,7 @@ import { isSafeSerial } from '@/domain/adb/entities/AdbDevice'
 import { isSafePackageName } from '@/domain/adb/entities/AndroidPackage'
 import type { LogcatEvent, LogcatRequest } from '@/domain/adb/entities/LogcatSession'
 import { clearLogcatBuffer } from '@/domain/adb/usecases/adbCommands'
+import { createFollowEventBatcher } from '@/domain/adb/usecases/batchFollowEvents'
 import { followAppLogcat } from '@/domain/adb/usecases/followAppLogcat'
 import { jsonError, jsonOk } from '@/lib/api/response'
 import { requireUser } from '@/lib/session'
@@ -11,16 +12,8 @@ import { requireUser } from '@/lib/session'
 /**
  * Luồng log của một app, chảy về dưới dạng NDJSON.
  *
- * ─── Vì sao gom dòng lại rồi mới đẩy ───
- *
- * Một app đang khởi động in ra vài nghìn dòng trong hai giây. Mỗi dòng một sự
- * kiện JSON nghĩa là vài nghìn lượt ghi vào luồng, vài nghìn lượt `JSON.parse`
- * bên kia, và vài nghìn lượt cập nhật state — trình duyệt đứng hình đúng lúc
- * người dùng cần nhìn nhất. Gom theo nhịp 100ms biến chỗ đó thành hai chục
- * lượt, mà mắt người không phân biệt được khác biệt.
- *
- * Nhịp gom nằm ở ĐÂY chứ không nằm trong use case: use case nói về việc bám
- * theo pid, còn gom bao nhiêu dòng một lượt là chuyện của đường truyền.
+ * Dòng được gom theo nhịp trước khi đẩy — lý do và nhịp nằm ở
+ * `createFollowEventBatcher`, dùng chung với đường WebUSB.
  *
  * ─── Vòng đời ───
  *
@@ -30,10 +23,6 @@ import { requireUser } from '@/lib/session'
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-/** Gom tối đa chừng này dòng, hoặc chừng này mili giây — cái nào tới trước. */
-const FLUSH_LINES = 300
-const FLUSH_MS = 100
 
 export async function POST(request: Request) {
   const user = await requireUser()
@@ -80,36 +69,16 @@ export async function POST(request: Request) {
         }
       }
 
-      let pending: string[] = []
-      const flush = (): void => {
-        if (pending.length === 0) return
-        const lines = pending
-        pending = []
-        send({ type: 'lines', lines })
-      }
-
-      const ticker = setInterval(flush, FLUSH_MS)
+      const batcher = createFollowEventBatcher(send)
 
       const outcome = await followAppLogcat(
         { shell: serverContainer.adb.shell },
         { serial, packageName, clearFirst },
-        (event) => {
-          if (event.type === 'line') {
-            pending.push(event.line)
-            if (pending.length >= FLUSH_LINES) flush()
-            return
-          }
-          // Mọi sự kiện khác đánh dấu một mốc trong luồng (bám được pid, app
-          // vừa chết). Xả hàng đợi trước khi gửi, nếu không thì các dòng cuối
-          // của tiến trình cũ sẽ hiện ra SAU thông báo "app đã thoát".
-          flush()
-          send(event)
-        },
+        batcher.emit,
         request.signal,
       )
 
-      clearInterval(ticker)
-      flush()
+      batcher.stop()
 
       if (!outcome.ok && outcome.error.kind !== 'cancelled') {
         send({

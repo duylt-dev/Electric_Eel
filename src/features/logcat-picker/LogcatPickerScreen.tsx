@@ -1,6 +1,7 @@
 'use client'
 
 import RefreshIcon from '@mui/icons-material/Refresh'
+import UsbIcon from '@mui/icons-material/Usb'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -12,6 +13,7 @@ import Typography from '@mui/material/Typography'
 import { useRouter } from 'next/navigation'
 import { useCallback, useMemo, useState } from 'react'
 
+import type { AdbAccess } from '@/domain/adb/entities/AdbAccess'
 import { SectionHeading } from '@/ui/components/SectionHeading'
 import { m3 } from '@/ui/theme/m3Tokens'
 import { LogcatPickerViewModel } from './LogcatPickerViewModel'
@@ -36,6 +38,12 @@ export interface LogcatPickerScreenProps {
    * biết, vì với máy chúng đơn giản là không tồn tại.
    */
   directory: readonly DirectoryApp[]
+  /**
+   * Đường tới thiết bị. `webusb` thì khối thiết bị có thêm nút "Kết nối thiết
+   * bị": WebUSB chỉ cho trang thấy máy mà người dùng đã chọn trong hộp thoại
+   * của trình duyệt — không có cách nào tự hiện như khi adb ở máy chủ.
+   */
+  access: AdbAccess
 }
 
 /**
@@ -50,7 +58,7 @@ export interface LogcatPickerScreenProps {
  * lý cú bấm — nhờ vậy quy tắc "phải chọn máy trước, phải có package name" nằm
  * trong ViewModel và kiểm thử được mà không cần vẽ gì.
  */
-export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
+export function LogcatPickerScreen({ directory, access }: LogcatPickerScreenProps) {
   const state = LogcatPickerViewModel.useState()
   const onIntent = LogcatPickerViewModel.useIntent()
   const router = useRouter()
@@ -98,6 +106,23 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
     <>
       <Stack spacing={7}>
         <Box>
+          {access === 'webusb' && (
+            <Stack direction="row" sx={{ gap: 3, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<UsbIcon fontSize="small" />}
+                onClick={() => onIntent({ type: 'DeviceConnectRequested' })}
+              >
+                Kết nối thiết bị
+              </Button>
+              <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
+                Chrome/Edge nói chuyện thẳng với máy qua USB. Nếu Android Studio đang mở, chạy{' '}
+                <code>adb kill-server</code> trước — cổng USB chỉ một chương trình giữ được.
+              </Typography>
+            </Stack>
+          )}
+
           {state.status === 'failed' && state.error !== null && (
             <Alert
               severity="error"
@@ -120,14 +145,24 @@ export function LogcatPickerScreen({ directory }: LogcatPickerScreenProps) {
             <Stack direction="row" sx={{ gap: 3, alignItems: 'center', py: 4 }}>
               <CircularProgress size={18} />
               <Typography variant="body2" sx={{ color: m3('onSurfaceVariant') }}>
-                Đang hỏi adb…
+                {access === 'webusb' ? 'Đang dò thiết bị đã cho phép…' : 'Đang hỏi adb…'}
               </Typography>
             </Stack>
           ) : state.devices.length === 0 ? (
             <Alert severity="info">
-              Chưa thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b> — máy sẽ tự hiện ở đây, không cần
-              tải lại trang. adb chạy trên máy chủ đang phục vụ trang này: nếu trang không chạy trên
-              máy của bạn thì máy cắm vào bàn bạn sẽ không hiện ra.
+              {access === 'webusb' ? (
+                <>
+                  Chưa có máy nào. Cắm cáp, bật <b>Gỡ lỗi USB</b>, rồi bấm <b>Kết nối thiết bị</b> và
+                  chọn máy trong hộp thoại của trình duyệt. Lần đầu điện thoại sẽ hỏi cho phép thêm
+                  một lần — khoá của trình duyệt khác khoá của Android Studio.
+                </>
+              ) : (
+                <>
+                  Chưa thấy máy nào. Cắm cáp và bật <b>Gỡ lỗi USB</b> — máy sẽ tự hiện ở đây, không
+                  cần tải lại trang. adb chạy trên máy chủ đang phục vụ trang này: nếu trang không
+                  chạy trên máy của bạn thì máy cắm vào bàn bạn sẽ không hiện ra.
+                </>
+              )}
             </Alert>
           ) : (
             <DeviceList

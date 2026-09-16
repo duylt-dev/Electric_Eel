@@ -32,6 +32,8 @@
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "@yume-chan/adb": "^2.6.4",
+    "@yume-chan/adb-credential-web": "^2.1.0",
+    "@yume-chan/adb-daemon-webusb": "^2.3.2",
     "@yume-chan/adb-scrcpy": "^2.3.2",
     "@yume-chan/adb-server-node-tcp": "^2.5.2",
     "@yume-chan/scrcpy": "^2.3.0",

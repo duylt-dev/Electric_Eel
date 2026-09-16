@@ -15,13 +15,21 @@ import { LogcatPickerViewModel } from './LogcatPickerViewModel'
  * `signal` để khẳng định đổi máy huỷ luồng cũ.
  */
 class FakeAdb implements AdbRepository {
+  readonly access = 'server' as const
   readonly labelSignals: AbortSignal[] = []
+  requests = 0
+  requestFailure: string | null = null
   /** `hold` = sau khi phát hết sự kiện vẫn giữ luồng mở cho tới khi bị huỷ — như máy chủ đang đọc dở. */
   constructor(
     private readonly labelEvents: PackageLabelEvent[],
     private readonly hold = false,
   ) {}
 
+  async requestDevice(): Promise<Result<AdbDevice | null>> {
+    this.requests += 1
+    if (this.requestFailure !== null) return err(AppErrors.upstream(this.requestFailure))
+    return ok(null)
+  }
   async listDevices(): Promise<Result<AdbDevice[]>> {
     return ok([{ serial: 'A', state: 'device', model: 'SM-A165F', product: null }])
   }
@@ -198,6 +206,43 @@ describe('LogcatPickerViewModel — theo dõi thiết bị', () => {
     assert.equal(state.status, 'failed')
     assert.equal(state.error?.message, 'adb lỡ nhịp')
     assert.equal(state.devices.length, 1)
+    vm.dispose()
+  })
+})
+
+describe('LogcatPickerViewModel — kết nối qua trình duyệt (WebUSB)', () => {
+  it('DeviceConnectRequested mở hộp chọn máy; đóng hộp không chọn thì im lặng', async () => {
+    const adb = new ScriptedAdb([{ type: 'done' }])
+    const vm = createViewModel(LogcatPickerViewModel.definition, { adb })
+    const effects: unknown[] = []
+    vm.connectEffects((effect) => effects.push(effect))
+    await settle()
+
+    vm.onIntent({ type: 'DeviceConnectRequested' })
+    await settle()
+
+    assert.equal(adb.requests, 1)
+    assert.deepEqual(effects, [])
+    vm.dispose()
+  })
+
+  it('hộp chọn hỏng (adb server đang giữ USB) thì báo lỗi, luồng theo dõi vẫn sống', async () => {
+    const adb = new ScriptedAdb([{ type: 'done' }])
+    adb.requestFailure = 'Thiết bị đang bị chương trình khác giữ.'
+    const vm = createViewModel(LogcatPickerViewModel.definition, { adb })
+    const effects: { type: string; message?: string }[] = []
+    vm.connectEffects((effect) => effects.push(effect))
+    await settle()
+
+    vm.onIntent({ type: 'DeviceConnectRequested' })
+    await settle()
+
+    assert.deepEqual(effects, [
+      { type: 'ShowMessage', severity: 'error', message: 'Thiết bị đang bị chương trình khác giữ.' },
+    ])
+    // Luồng theo dõi không bị huỷ theo: máy cắm sau đó vẫn phải hiện ra.
+    adb.push({ type: 'devices', devices: [device('A')] })
+    assert.equal(vm.store.getState().selectedSerial, 'A')
     vm.dispose()
   })
 })

@@ -12,6 +12,12 @@ export type AdbDeviceState =
   | 'unauthorized'
   /** adb thấy máy nhưng không nói chuyện được — thường do vừa rút hoặc vừa khởi động lại. */
   | 'offline'
+  /**
+   * Đang bắt tay với daemon trên máy. Chỉ có ở đường WebUSB: trình duyệt tự
+   * xác thực từng máy, và trong lúc đó máy chưa dùng được nhưng cũng chưa
+   * phải là "chưa cho phép" — hộp thoại trên máy chỉ hiện nếu khoá này mới.
+   */
+  | 'connecting'
   | 'unknown'
 
 export interface AdbDevice {
@@ -71,6 +77,8 @@ export function stateLabel(state: AdbDeviceState): string {
       return 'chưa cho phép gỡ lỗi'
     case 'offline':
       return 'mất kết nối'
+    case 'connecting':
+      return 'đang kết nối'
     default:
       return 'không rõ'
   }

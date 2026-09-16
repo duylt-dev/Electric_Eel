@@ -47,6 +47,13 @@ const request = async <T>(
 }
 
 export class HttpAdbRepository implements AdbRepository {
+  readonly access = 'server' as const
+
+  /** adb ở máy chủ tự thấy máy — không có hộp thoại nào để mở. */
+  async requestDevice(): Promise<Result<AdbDevice | null>> {
+    return err(AppErrors.validation('Máy chủ tự nhìn thấy thiết bị cắm vào nó; không cần xin quyền.'))
+  }
+
   async listDevices(signal?: AbortSignal): Promise<Result<AdbDevice[]>> {
     const body = await request<{ devices: AdbDevice[] }>('/devices', { method: 'GET' }, signal)
     return body.ok ? ok(body.value.devices) : body
