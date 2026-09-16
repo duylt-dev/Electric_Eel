@@ -66,7 +66,7 @@ export default async function AppAdminPage({ params }: PageProps) {
     <>
       <PageHeader>
         <Tooltip title="Về danh sách project">
-          <LinkIconButton href="/admin" size="small" aria-label="Về danh sách project">
+          <LinkIconButton href="/admin/apps" size="small" aria-label="Về danh sách project">
             <ArrowBackIcon fontSize="small" />
           </LinkIconButton>
         </Tooltip>

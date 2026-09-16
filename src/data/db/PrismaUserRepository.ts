@@ -88,6 +88,35 @@ export class PrismaUserRepository implements UserRepository {
     }, 'Không tạo được tài khoản.')
   }
 
+  async updateUser(
+    id: string,
+    input: { email: string; name: string; role: GlobalRole },
+  ): Promise<Result<AuthenticatedUser>> {
+    const email = input.email.trim().toLowerCase()
+
+    const taken = await attemptAsync(() => prisma.user.findUnique({ where: { email } }))
+    if (!taken.ok) return taken
+    if (taken.value !== null && taken.value.id !== id) {
+      return err(AppErrors.validation(`Email "${email}" đã thuộc về tài khoản khác.`))
+    }
+
+    return attemptAsync(async () => {
+      const row = await prisma.user.update({
+        where: { id },
+        data: { email, name: input.name.trim(), role: input.role },
+      })
+      return toUser(row)
+    }, 'Không cập nhật được tài khoản.')
+  }
+
+  async deleteUser(id: string): Promise<Result<void>> {
+    const deleted = await attemptAsync(
+      () => prisma.user.delete({ where: { id } }),
+      'Không xoá được tài khoản.',
+    )
+    return deleted.ok ? ok(undefined) : deleted
+  }
+
   async setActive(id: string, isActive: boolean): Promise<Result<void>> {
     const updated = await attemptAsync(
       () => prisma.user.update({ where: { id }, data: { isActive } }),

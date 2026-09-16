@@ -14,11 +14,16 @@ export type AuditAction =
   | 'TEMPLATE_VALIDATE'
   | 'TEMPLATE_PUBLISH'
   | 'APP_CREATE'
+  | 'APP_UPDATE'
+  | 'APP_DELETE'
   | 'APP_PACKAGE_SET'
   | 'APP_CREDENTIAL_SET'
   | 'APP_CREDENTIAL_REMOVE'
   | 'APP_MEMBERSHIP_SET'
   | 'USER_CREATE'
+  | 'USER_UPDATE'
+  | 'USER_PASSWORD_RESET'
+  | 'USER_DELETE'
   | 'USER_DEACTIVATE'
   | 'USER_PASSWORD_CHANGE'
   | 'LOGIN_FAILED'
@@ -58,5 +63,32 @@ export interface AuditLogRepository {
     succeeded?: boolean
   }): Promise<void>
 
-  list(filter: { appId?: string; userId?: string; limit?: number }): Promise<Result<AuditEntry[]>>
+  list(filter: AuditListFilter): Promise<Result<AuditPage>>
+}
+
+/**
+ * Điều kiện lọc và cắt trang của nhật ký.
+ *
+ * Cắt trang ở máy chủ chứ không ở trình duyệt như hai bảng quản trị: nhật ký
+ * dài không giới hạn, tải hết về chỉ để xem 25 dòng đầu là trả tiền cho cả
+ * bảng mỗi lần mở trang.
+ */
+export interface AuditListFilter {
+  appId?: string
+  userId?: string
+  /** Mốc đầu, bao gồm. */
+  from?: Date | null
+  /** Mốc cuối, KHÔNG bao gồm. */
+  to?: Date | null
+  /** `null`/bỏ trống là lấy cả hai. */
+  succeeded?: boolean | null
+  /** Đếm từ 1. Trang vượt quá tổng số thì trả về trang rỗng, không lỗi. */
+  page?: number
+  pageSize?: number
+}
+
+export interface AuditPage {
+  entries: AuditEntry[]
+  /** Tổng số bản ghi khớp bộ lọc, để vẽ hàng nút trang. */
+  total: number
 }

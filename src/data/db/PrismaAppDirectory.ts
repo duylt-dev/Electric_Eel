@@ -5,6 +5,7 @@ import type {
   AppDirectoryAdmin,
   AppDirectoryReader,
   CreateAppInput,
+  UpdateAppInput,
 } from '../../domain/identity/repositories/AppDirectoryRepository'
 import { forgetCachedCredential } from '../remote-config/FirebaseRemoteConfigRepository'
 import type { AppCredentialProvider, ServiceAccount } from '../remote-config/ServiceAccount'
@@ -115,6 +116,31 @@ export class PrismaAppDirectory implements AppDirectoryReader, AppDirectoryAdmin
       })
       return toSummary(row, 'PUBLISHER')
     }, 'Không tạo được app.')
+  }
+
+  async updateApp(slug: string, input: UpdateAppInput): Promise<Result<FirebaseAppSummary>> {
+    return attemptAsync(async () => {
+      const row = await prisma.firebaseApp.update({
+        where: { slug },
+        data: {
+          displayName: input.displayName,
+          projectId: input.projectId,
+          packageName: input.packageName,
+          isActive: input.isActive,
+        },
+      })
+      return toSummary(row, 'PUBLISHER')
+    }, 'Không cập nhật được app.')
+  }
+
+  async deleteApp(slug: string): Promise<Result<FirebaseAppSummary>> {
+    return attemptAsync(async () => {
+      const row = await prisma.firebaseApp.delete({ where: { slug } })
+      // Credential đã giải mã có thể còn trong cache của adapter Firebase;
+      // quên nó đi để một app tạo lại cùng service account không dùng nhầm.
+      if (row.credentialClientEmail !== null) forgetCachedCredential(row.credentialClientEmail)
+      return toSummary(row, 'PUBLISHER')
+    }, 'Không xoá được app.')
   }
 
   async setPackageName(slug: string, packageName: string | null): Promise<Result<FirebaseAppSummary>> {

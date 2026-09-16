@@ -25,9 +25,28 @@ export interface CreateAppInput {
   createdById: string
 }
 
+/**
+ * Những gì sửa được sau khi tạo. KHÔNG có `slug`: nó nằm trong URL, trong
+ * nhật ký và trong bookmark của mọi người — đổi nó là làm hỏng tất cả những
+ * chỗ đó cùng lúc. Sai slug thì tạo app mới rồi xoá app cũ.
+ */
+export interface UpdateAppInput {
+  displayName: string
+  projectId: string
+  packageName: string | null
+  /** Tắt thì app vẫn còn trong danh bạ nhưng được đánh dấu "đã ngừng". */
+  isActive: boolean
+}
+
 /** Quản trị danh bạ. Chỉ khu vực quản trị dùng tới. */
 export interface AppDirectoryAdmin {
   createApp(input: CreateAppInput): Promise<Result<FirebaseAppSummary>>
+  updateApp(slug: string, input: UpdateAppInput): Promise<Result<FirebaseAppSummary>>
+  /**
+   * Xoá hẳn app cùng phân quyền và schema của nó. Service account mã hoá đi
+   * theo hàng. Nhật ký giữ lại với `appId` về `null`.
+   */
+  deleteApp(slug: string): Promise<Result<FirebaseAppSummary>>
   /** Đặt hoặc xoá (`null`) applicationId của một app đã tạo. */
   setPackageName(slug: string, packageName: string | null): Promise<Result<FirebaseAppSummary>>
   /** Nhận nguyên văn service account JSON; hàm này lo phần mã hoá. */

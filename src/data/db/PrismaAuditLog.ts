@@ -1,8 +1,11 @@
 import { type Result, attemptAsync } from '../../core/result'
+import { PAGE_SIZE, clampPage } from '../../core/util/paging'
 import type {
   AuditAction,
   AuditEntry,
+  AuditListFilter,
   AuditLogRepository,
+  AuditPage,
 } from '../../domain/identity/repositories/AuditLogRepository'
 import { prisma } from './prismaClient'
 
@@ -41,19 +44,34 @@ export class PrismaAuditLog implements AuditLogRepository {
     }
   }
 
-  async list(filter: { appId?: string; userId?: string; limit?: number }): Promise<Result<AuditEntry[]>> {
+  async list(filter: AuditListFilter): Promise<Result<AuditPage>> {
     return attemptAsync(async () => {
+      const createdAt = {
+        ...(filter.from instanceof Date ? { gte: filter.from } : {}),
+        ...(filter.to instanceof Date ? { lt: filter.to } : {}),
+      }
+      const where = {
+        ...(filter.appId !== undefined ? { appId: filter.appId } : {}),
+        ...(filter.userId !== undefined ? { userId: filter.userId } : {}),
+        ...(typeof filter.succeeded === 'boolean' ? { succeeded: filter.succeeded } : {}),
+        ...(Object.keys(createdAt).length > 0 ? { createdAt } : {}),
+      }
+
+      const pageSize = filter.pageSize ?? PAGE_SIZE
+      // Đếm trước rồi mới kéo về khoảng hợp lệ: URL ghi `page=9` của một bộ
+      // lọc chỉ còn 2 trang thì hiện trang cuối, không phải bảng trống.
+      const total = await prisma.auditLog.count({ where })
+      const page = clampPage(filter.page ?? 1, Math.ceil(total / pageSize))
+
       const rows = await prisma.auditLog.findMany({
-        where: {
-          ...(filter.appId !== undefined ? { appId: filter.appId } : {}),
-          ...(filter.userId !== undefined ? { userId: filter.userId } : {}),
-        },
+        where,
         include: { user: true, app: true },
         orderBy: { createdAt: 'desc' },
-        take: filter.limit ?? 100,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
       })
 
-      return rows.map<AuditEntry>((row) => ({
+      const entries = rows.map<AuditEntry>((row) => ({
         id: row.id,
         action: asAction(row.action),
         userId: row.userId,
@@ -67,6 +85,7 @@ export class PrismaAuditLog implements AuditLogRepository {
         succeeded: row.succeeded,
         createdAt: row.createdAt,
       }))
+      return { entries, total }
     }, 'Không đọc được nhật ký thao tác.')
   }
 }

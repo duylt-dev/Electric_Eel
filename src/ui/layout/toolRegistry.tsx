@@ -1,4 +1,5 @@
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'
+import FolderIcon from '@mui/icons-material/Folder'
+import GroupIcon from '@mui/icons-material/Group'
 import HistoryIcon from '@mui/icons-material/History'
 import TerminalIcon from '@mui/icons-material/Terminal'
 import InsightsIcon from '@mui/icons-material/Insights'
@@ -123,12 +124,25 @@ export const TOOLS: readonly ToolDefinition[] = [
     status: 'planned',
     audiences: ['business'],
   },
+  // Hai mục quản trị là hai công cụ riêng chứ không phải hai mục trong một
+  // trang: mỗi danh sách có trang riêng của nó (`/admin/apps`, `/admin/users`)
+  // để số trang, ô tìm kiếm về sau và biểu mẫu tạo mới không kéo nhau cuộn.
   {
-    id: 'admin',
-    label: 'Quản trị',
-    description: 'Tài khoản, app và phân quyền.',
-    href: '/admin',
-    icon: AdminPanelSettingsIcon,
+    id: 'admin-apps',
+    label: 'Dự án',
+    description: 'Project Firebase, service account và phân quyền trên từng app.',
+    href: '/admin/apps',
+    icon: FolderIcon,
+    status: 'available',
+    audiences: ['admin'],
+    adminOnly: true,
+  },
+  {
+    id: 'admin-users',
+    label: 'Tài khoản',
+    description: 'Tạo tài khoản nội bộ, khoá và mở lại.',
+    href: '/admin/users',
+    icon: GroupIcon,
     status: 'available',
     audiences: ['admin'],
     adminOnly: true,
