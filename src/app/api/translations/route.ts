@@ -27,6 +27,13 @@ import { requireUser } from '@/lib/session'
  */
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+/**
+ * Trần thời gian một function trên Vercel, tính bằng giây. Mặc định chỉ vài
+ * chục giây — không đủ cho một lượt dịch. 300 là trần của gói Hobby; gói Pro
+ * cho tới 800. Luồng NDJSON chảy đều nên kết nối không bị cắt vì im lặng, chỉ
+ * bị cắt khi chạm trần này. Chạy ngoài Vercel thì cờ này không có tác dụng.
+ */
+export const maxDuration = 300
 
 /** Trần số ngôn ngữ mỗi lượt. Đủ cho cả danh sách, chặn được yêu cầu viết tay. */
 const MAX_LANGUAGES = 60

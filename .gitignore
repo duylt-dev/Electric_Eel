@@ -51,3 +51,5 @@ test-results/
 LLM.md
 docs
 plans
+.vercel
+.env*

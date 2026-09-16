@@ -1,6 +1,7 @@
-// Schema viết theo tập tính năng giao nhau giữa SQLite và PostgreSQL:
-// không enum (SQLite không hỗ trợ), không mảng vô hướng, không kiểu JSON gốc.
-// Chuyển sang Postgres về sau chỉ cần đổi `provider` rồi chạy lại migration.
+// Schema vẫn giữ tập tính năng giao nhau giữa SQLite và PostgreSQL — không
+// enum, không mảng vô hướng, không kiểu JSON gốc — dù giờ chỉ chạy Postgres.
+// Lý do: giữ nguyên thì đường quay về SQLite (chạy trên một máy chủ tự quản,
+// nơi Logcat/Mirror còn dùng được) vẫn là đổi một dòng `provider`.
 
 generator client {
   // Generator mới của Prisma 7: sinh TypeScript thay vì JS đã đóng gói, nên
@@ -13,7 +14,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 /// Tài khoản nội bộ. Không SSO — mật khẩu băm bằng bcrypt.
