@@ -4,6 +4,7 @@ import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 
+import { RENAMED_ROOT_FIELDS } from '@/domain/ads/entities/ShowAdsDocument'
 import type { ShowAdsDocument } from '@/domain/ads/entities/ShowAdsDocument'
 import type { Finding } from '@/domain/ads/validation/Finding'
 import { m3, m3Shape } from '@/ui/theme/m3Tokens'
@@ -24,16 +25,28 @@ export function GlobalSettings({
   findings,
   readOnly,
   onChange,
+  onRenameField,
 }: {
   document: ShowAdsDocument
   findings: readonly Finding[]
   readOnly: boolean
   onChange: (field: string, value: unknown) => void
+  onRenameField: (from: string, to: string) => void
 }) {
   const killSwitch = ROOT_SWITCHES[0]
   const switches = ROOT_SWITCHES.slice(1)
 
   const rootFindings = findings.filter((finding) => finding.path.scope === 'showAdsRoot')
+
+  // Khoá sai tên không có ô nào trên form để sửa hay xoá, nên cách duy nhất
+  // là một nút ngay trên phát hiện: đổi tên khoá, giữ nguyên giá trị.
+  const actionFor = (finding: Finding) => {
+    if (readOnly || finding.code !== 'ROOT_FIELD_RENAMED') return undefined
+    const from = 'field' in finding.path ? finding.path.field : undefined
+    const to = from === undefined ? undefined : RENAMED_ROOT_FIELDS[from]
+    if (from === undefined || to === undefined) return undefined
+    return { label: `Đổi tên thành ${to}`, onClick: () => onRenameField(from, to) }
+  }
 
   return (
     <Stack spacing={6}>
@@ -61,7 +74,7 @@ export function GlobalSettings({
         </Box>
       )}
 
-      {rootFindings.length > 0 && <FindingList findings={rootFindings} />}
+      {rootFindings.length > 0 && <FindingList findings={rootFindings} actionFor={actionFor} />}
 
       <Box>
         <Typography variant="subtitle1">Công tắc theo loại quảng cáo</Typography>

@@ -316,6 +316,7 @@ export function ConfigEditorScreen({ canEdit, canPublish }: ConfigEditorScreenPr
             findings={resolved.validation.findings}
             readOnly={readOnly}
             onChange={(field, value) => onIntent({ type: 'ShowAdsRootChanged', field, value })}
+            onRenameField={(from, to) => onIntent({ type: 'ShowAdsRootFieldRenamed', from, to })}
           />
         )}
 

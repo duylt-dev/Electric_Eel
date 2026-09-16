@@ -16,6 +16,7 @@ import {
   removeCondition,
   removePlacement,
   removePlacementField,
+  renameShowAdsRootField,
   setVariantRaw,
   updateAdUnit,
   updateAdmobRoot,
@@ -276,6 +277,12 @@ export const ConfigEditorViewModel = defineViewModel<
 
       case 'ShowAdsRootChanged':
         editDraft(ctx, (draft, condition) => updateShowAdsRoot(draft, condition, intent.field, intent.value))
+        return
+
+      case 'ShowAdsRootFieldRenamed':
+        editDraft(ctx, (draft, condition) =>
+          renameShowAdsRootField(draft, condition, intent.from, intent.to),
+        )
         return
 
       case 'AdmobRootChanged':

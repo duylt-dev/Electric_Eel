@@ -145,6 +145,27 @@ export const updateShowAdsRoot = (
 ): AdsWorkspace =>
   editShowAds(workspace, conditionName, (document) => ({ ...document, [field]: value }))
 
+/**
+ * Đổi tên một trường cấp gốc viết sai (`isRewardInter` → `isRewardInterOn`),
+ * giữ nguyên giá trị. Đây là cách sửa duy nhất mà biểu mẫu cho phép với một
+ * khoá SDK không đọc: form chỉ vẽ trường đúng tên, nên không có ô nào để xoá
+ * khoá sai. Nếu tên đúng đã có sẵn thì giá trị của nó thắng — nó mới là thứ
+ * SDK đang đọc — và khoá sai chỉ bị bỏ đi.
+ */
+export const renameShowAdsRootField = (
+  workspace: AdsWorkspace,
+  conditionName: string | null,
+  from: string,
+  to: string,
+): AdsWorkspace =>
+  editShowAds(workspace, conditionName, (document) => {
+    const copy = { ...document } as Record<string, unknown>
+    if (!(from in copy)) return document
+    if (!(to in copy)) copy[to] = copy[from]
+    delete copy[from]
+    return copy as unknown as ShowAdsDocument
+  })
+
 // ── admob_id ────────────────────────────────────────────────────────────────
 
 function editAdmob(

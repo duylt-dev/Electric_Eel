@@ -214,6 +214,36 @@ describe('ConfigEditorViewModel', () => {
     assert.equal(forDefault?.showAds?.disableAllConfig, false, 'mặc định phải giữ nguyên')
   })
 
+  it('đổi tên khoá cấp gốc viết sai: giữ giá trị, hết lỗi ROOT_FIELD_RENAMED', async () => {
+    const { vm } = makeViewModel()
+    vm.onIntent({ type: 'Load' })
+    await settle()
+
+    // Bản JSON có khoá sai tên, như project dựng từ template cũ của LibAds.
+    const wrong = JSON.parse(readTemplate('config_show_ads-template.json')) as Record<string, unknown>
+    delete wrong['isRewardInterOn']
+    wrong['isRewardInter'] = false
+    vm.onIntent({ type: 'RawImported', parameter: 'showAds', raw: JSON.stringify(wrong) })
+
+    const before = currentResolved(vm.store.getState())
+    assert.ok(
+      before?.validation.findings.some((f) => f.code === 'ROOT_FIELD_RENAMED'),
+      'phải báo lỗi trước khi sửa',
+    )
+
+    vm.onIntent({ type: 'ShowAdsRootFieldRenamed', from: 'isRewardInter', to: 'isRewardInterOn' })
+
+    const after = currentResolved(vm.store.getState())
+    const doc = after?.showAds as Record<string, unknown> | null | undefined
+    assert.equal(doc?.['isRewardInterOn'], false, 'giá trị phải đi theo tên mới')
+    assert.equal('isRewardInter' in (doc ?? {}), false, 'khoá sai phải biến mất')
+    assert.equal(
+      after?.validation.findings.some((f) => f.code === 'ROOT_FIELD_RENAMED'),
+      false,
+      'lỗi phải hết sau khi sửa',
+    )
+  })
+
   it('publish gửi kèm đúng ETag và giữ nguyên tham số của nhóm khác', async () => {
     const repo = new FakeRemoteConfig()
     const { vm, effects } = makeViewModel(repo)

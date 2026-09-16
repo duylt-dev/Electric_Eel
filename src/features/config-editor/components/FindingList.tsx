@@ -4,6 +4,7 @@ import ErrorIcon from '@mui/icons-material/ErrorOutlineRounded'
 import HelpIcon from '@mui/icons-material/HelpOutlineRounded'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 
@@ -29,11 +30,21 @@ const STYLE: Record<Severity, { icon: typeof ErrorIcon; edge: string; tone: Stat
 }
 
 /**
+ * Nút sửa nhanh gắn vào một phát hiện. Chỉ những phát hiện có cách sửa máy
+ * làm được (đổi tên khoá, xoá trường rác) mới có nút; phần còn lại vẫn chỉ
+ * là câu "Cách sửa" để người đọc tự làm.
+ */
+export interface FindingAction {
+  label: string
+  onClick: () => void
+}
+
+/**
  * Một phát hiện vẽ như một khối ghi chú: nền trung tính, một vạch màu ở cạnh
  * trái. Tô nguyên khối theo màu mức độ thì mười phát hiện xếp liền nhau thành
  * một mảng màu, và cái thứ mười nhìn khẩn cấp y như cái thứ nhất.
  */
-export function FindingRow({ finding }: { finding: Finding }) {
+export function FindingRow({ finding, action }: { finding: Finding; action?: FindingAction }) {
   const style = STYLE[finding.severity]
   const Icon = style.icon
 
@@ -60,6 +71,11 @@ export function FindingRow({ finding }: { finding: Finding }) {
             Cách sửa: {finding.fix}
           </Typography>
         )}
+        {action !== undefined && (
+          <Button size="small" variant="outlined" onClick={action.onClick} sx={{ mt: 2 }}>
+            {action.label}
+          </Button>
+        )}
         <Typography
           sx={{ ...m3Mono.columnHeader, display: 'block', mt: 2, color: m3('outline'), fontFamily: MONO_FONT_STACK }}
         >
@@ -77,10 +93,13 @@ export function FindingList({
   findings,
   emptyMessage = 'Không có vấn đề nào.',
   max,
+  actionFor,
 }: {
   findings: readonly Finding[]
   emptyMessage?: string
   max?: number
+  /** Trả về nút sửa nhanh cho một phát hiện, hoặc `undefined` nếu không có. */
+  actionFor?: (finding: Finding) => FindingAction | undefined
 }) {
   if (findings.length === 0) {
     return (
@@ -106,7 +125,7 @@ export function FindingList({
   return (
     <Stack spacing={2}>
       {keyed.map(({ finding, key }) => (
-        <FindingRow key={key} finding={finding} />
+        <FindingRow key={key} finding={finding} action={actionFor?.(finding)} />
       ))}
       {shown.length < findings.length && (
         <Typography variant="caption" sx={{ color: m3('onSurfaceVariant') }}>
