@@ -1,15 +1,10 @@
 'use client'
 
-import ClearIcon from '@mui/icons-material/Clear'
-import SearchIcon from '@mui/icons-material/Search'
 import SearchOffIcon from '@mui/icons-material/SearchOff'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
-import IconButton from '@mui/material/IconButton'
-import InputAdornment from '@mui/material/InputAdornment'
 import Stack from '@mui/material/Stack'
-import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useDeferredValue, useMemo, useState } from 'react'
 
@@ -17,6 +12,7 @@ import { buildAppSearchIndex, filterApps } from '@/domain/identity/AppSearch'
 import type { FirebaseAppSummary } from '@/domain/identity/entities/FirebaseAppSummary'
 import { APP_ROLE_LABEL } from '@/domain/identity/entities/Permission'
 import { LinkCardAction } from '@/ui/components/NavLink'
+import { SearchField } from '@/ui/components/SearchField'
 import { StatusChip } from '@/ui/components/StatusChip'
 import { MONO_FONT_STACK, m3 } from '@/ui/theme/m3Tokens'
 
@@ -64,42 +60,11 @@ export function AppPicker({ apps }: { apps: readonly FirebaseAppSummary[] }) {
         direction={{ xs: 'column', sm: 'row' }}
         sx={{ gap: 3, alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
       >
-        <TextField
-          type="search"
+        <SearchField
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') setQuery('')
-          }}
+          onChange={setQuery}
           placeholder="Tìm theo tên, Project ID hoặc package name"
-          sx={{
-            width: '100%',
-            maxWidth: 460,
-            // Nút xoá mặc định của WebKit không theo bảng màu nên ở chế độ tối
-            // nó là một chấm xám lạc lõng. Dùng nút của mình ở dưới.
-            'input[type="search"]::-webkit-search-cancel-button': { display: 'none' },
-          }}
-          slotProps={{
-            // `aria-label` phải đặt trên chính thẻ <input>. Truyền thẳng cho
-            // TextField thì MUI dán nó lên FormControl bọc ngoài, và trình đọc
-            // màn hình vẫn đọc ô này là một ô nhập không tên.
-            htmlInput: { 'aria-label': 'Tìm app' },
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon fontSize="small" />
-                </InputAdornment>
-              ),
-              endAdornment:
-                query.length === 0 ? null : (
-                  <InputAdornment position="end">
-                    <IconButton size="small" aria-label="Xoá ô tìm kiếm" onClick={() => setQuery('')}>
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-            },
-          }}
+          label="Tìm app"
         />
 
         <Typography variant="caption" sx={{ color: m3('onSurfaceVariant'), flexShrink: 0 }}>
