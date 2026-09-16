@@ -1,7 +1,9 @@
-// Schema vẫn giữ tập tính năng giao nhau giữa SQLite và PostgreSQL — không
-// enum, không mảng vô hướng, không kiểu JSON gốc — dù giờ chỉ chạy Postgres.
-// Lý do: giữ nguyên thì đường quay về SQLite (chạy trên một máy chủ tự quản,
-// nơi Logcat/Mirror còn dùng được) vẫn là đổi một dòng `provider`.
+// Schema giữ tập tính năng giao nhau giữa SQLite và PostgreSQL — không enum,
+// không mảng vô hướng, không kiểu JSON gốc — vì CÙNG file này chạy cả hai:
+// biến thể debug (`pnpm dev`) là SQLite, release (Vercel) là Postgres. Đây là
+// bản gốc duy nhất; `prisma.config.ts` chép nó thành `schema.sqlite.prisma`
+// với `provider` đổi đi khi DATABASE_URL là `file:`. Thêm một tính năng chỉ
+// Postgres có vào đây là làm `pnpm dev` gãy ở `prisma db push`.
 
 generator client {
   // Generator mới của Prisma 7: sinh TypeScript thay vì JS đã đóng gói, nên

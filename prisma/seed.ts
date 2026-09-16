@@ -1,3 +1,6 @@
+// Phải là import đầu tiên: nạp `.env*` theo biến thể trước khi prismaClient đọc DATABASE_URL.
+import '../scripts/load-env'
+
 import { PrismaUserRepository } from '../src/data/db/PrismaUserRepository'
 import { MIN_PASSWORD_LENGTH } from '../src/domain/identity/entities/PasswordPolicy'
 

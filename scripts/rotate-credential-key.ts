@@ -26,6 +26,9 @@
  * bảng đó thành rác, và điều đó chỉ lộ ra vào lần dùng tiếp theo — có khi là
  * vài tuần sau.
  */
+// Phải là import đầu tiên: nạp `.env*` theo biến thể trước khi prismaClient đọc DATABASE_URL.
+import './load-env'
+
 import { prisma } from '../src/data/db/prismaClient'
 import {
   activeKeyId,

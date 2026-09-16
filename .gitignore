@@ -10,15 +10,19 @@ next-env.d.ts
 
 # prisma
 src/generated/
+# bản chép của schema.prisma với provider = sqlite, prisma.config.ts sinh lại mỗi lần chạy
+prisma/schema.sqlite.prisma
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
 
-# env — không bao giờ commit
+# env — không bao giờ commit, TRỪ .env.development: chỉ trỏ vào dev.db, không
+# có bí mật, và nhờ nó clone về là `pnpm dev` chạy được ngay
 .env
 .env.local
 .env.*.local
+.env.production
 
 # credential Firebase tải về máy
 *service-account*.json
@@ -53,3 +57,7 @@ docs
 plans
 .vercel
 .env*
+!.env.development
+.windsurf
+.agents
+skills-lock.json
